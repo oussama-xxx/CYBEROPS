@@ -1,0 +1,239 @@
+{% extends 'analyzer/base.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --soc-bg: #010409;
+        --soc-panel: #020613;
+        --soc-neon: #00ff99;
+        --soc-alert: #ff3366;
+        --soc-input-bg: #050b14;
+        --soc-border: rgba(0, 255, 153, 0.15);
+        --text-bright: #ffffff;
+        --text-muted: #64748b;
+        --text-body: #cbd5e1;
+        
+        --shadow-3d-input: 
+            inset 0 4px 8px rgba(0, 0, 0, 0.85),
+            0 2px 0 rgba(255, 255, 255, 0.03);
+    }
+
+    .contact-grid-layout {
+        display: grid;
+        grid-template-columns: 1.2fr 0.9fr; /* تقسيم الـ Columns */
+        gap: 3rem;
+        padding: 3.5rem;
+        background: var(--soc-bg);
+        min-height: calc(100vh - 60px);
+        font-family: 'SF Mono', Monaco, Consolas, monospace;
+    }
+
+    .contact-main-title {
+        grid-column: 1 / -1;
+        margin-bottom: 1.5rem;
+    }
+    .contact-main-title h3 {
+        color: var(--text-bright);
+        font-size: 2.4rem;
+        font-weight: 800;
+        letter-spacing: -0.5px;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin: 0;
+    }
+    .contact-main-title h3 span {
+        color: var(--soc-neon);
+    }
+    .contact-main-title p {
+        color: var(--text-muted);
+        font-size: 1.05rem;
+        margin: 0.5rem 0 0 0;
+    }
+
+    /* CARDS STRUCTURE */
+    .contact-panel-card {
+        background: var(--soc-panel);
+        border: 1px solid rgba(0, 255, 153, 0.08);
+        border-radius: 6px;
+        padding: 2.5rem;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+    }
+
+    .panel-section-title {
+        color: var(--soc-neon);
+        font-size: 1rem;
+        font-weight: 700;
+        letter-spacing: 2px;
+        margin-bottom: 2.5rem;
+        padding-bottom: 0.8rem;
+        border-bottom: 2px solid rgba(0, 255, 153, 0.15);
+        text-transform: uppercase;
+    }
+
+    /* INPUT STYLES */
+    .soc-field-container {
+        margin-bottom: 2.2rem;
+    }
+    .soc-field-container label {
+        display: block;
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: var(--text-bright);
+        letter-spacing: 1px;
+        margin-bottom: 1rem;
+        text-transform: uppercase;
+    }
+    .soc-field-container input, 
+    .soc-field-container select, 
+    .soc-field-container textarea {
+        width: 100%;
+        padding: 1.2rem 1.4rem;
+        background: var(--soc-input-bg);
+        border: 2px solid var(--soc-border);
+        border-radius: 6px;
+        color: var(--text-bright);
+        font-size: 1.15rem;
+        box-shadow: var(--shadow-3d-input);
+        transition: all 0.2s ease;
+        font-family: inherit;
+    }
+    .soc-field-container input:focus, 
+    .soc-field-container select:focus, 
+    .soc-field-container textarea:focus {
+        outline: none;
+        border-color: var(--soc-neon);
+        box-shadow: 0 0 20px rgba(0, 255, 153, 0.15);
+        background: #040d1a;
+    }
+    .field-hint-text {
+        display: block;
+        font-size: 0.85rem;
+        color: var(--text-muted);
+        margin-top: 0.5rem;
+    }
+
+    /* BUTTON ACTION */
+    .btn-soc-submit {
+        padding: 1.2rem 2.5rem;
+        background: transparent;
+        border: 2px solid var(--soc-neon);
+        color: var(--soc-neon);
+        font-family: inherit;
+        font-weight: 800;
+        font-size: 1.1rem;
+        letter-spacing: 2px;
+        border-radius: 6px;
+        cursor: pointer;
+        text-transform: uppercase;
+        transition: all 0.2s ease;
+    }
+    .btn-soc-submit:hover {
+        background: rgba(0, 255, 153, 0.04);
+        box-shadow: 0 0 25px rgba(0, 255, 153, 0.2);
+        transform: translateY(-2px);
+    }
+
+    /* INFO BOX */
+    .info-tactical-box {
+        background: rgba(0, 255, 153, 0.01);
+        border: 1px solid rgba(0, 255, 153, 0.2);
+        padding: 1.8rem;
+        border-radius: 6px;
+        margin-bottom: 2.5rem;
+        position: relative;
+        overflow: hidden;
+    }
+    .info-tactical-box::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0; width: 4px; height: 100%;
+        background: var(--soc-neon);
+    }
+    .info-tactical-box h5 {
+        color: var(--soc-neon);
+        font-size: 1.1rem;
+        font-weight: 700;
+        margin: 0 0 0.6rem 0;
+    }
+    .info-tactical-box p {
+        color: var(--text-body);
+        font-size: 0.95rem;
+        line-height: 1.6;
+        margin: 0;
+    }
+
+    @media (max-width: 1024px) {
+        .contact-grid-layout { grid-template-columns: 1fr; gap: 2rem; padding: 2rem; }
+    }
+</style>
+
+<div class="contact-grid-layout">
+    
+    <div class="contact-main-title">
+        <h3><i class="bi bi-terminal-dash" style="color: var(--soc-neon);"></i> Contact</h3>
+        <p>Establish a secure routing vector to submit requests, bugs, or infrastructure upgrade queries.</p>
+    </div>
+
+    <div class="contact-panel-card">
+        <div class="panel-section-title">[01] New Provisioning Transmission</div>
+        
+        <form method="post" action="">
+            {% csrf_token %}
+            <div class="row g-4">
+                <div class="col-md-6">
+                    <div class="soc-field-container">
+                        <label>Operator Identity</label>
+                        <input type="text" name="name" value="{{ request.user.username|default:'' }}" placeholder="e.g. Oussama_err" required autocomplete="off">
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="soc-field-container">
+                        <label>Return Routing Mail</label>
+                        <input type="email" name="email" value="{{ request.user.email|default:'' }}" placeholder="operator@cyberops.ma" required autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
+            <div class="soc-field-container">
+                <label>Transmission Vector (Subject)</label>
+                <input type="text" name="subject" placeholder="Specify the core objective of this transmission..." required autocomplete="off">
+            </div>
+
+            <div class="soc-field-container">
+                <label>Payload Data (Message)</label>
+                <textarea name="message" rows="6" placeholder="Describe your request, issue, or feedback in full cryptographic cleartext..." required></textarea>
+                <span class="field-hint-text">Marhaban! Any system query or provisioning feedback is welcome.</span>
+            </div>
+
+            <div style="margin-top: 3rem;">
+                <button type="submit" class="btn-soc-submit">Execute_Transmission()</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="d-flex flex-column gap-4">
+        
+        <div class="contact-panel-card">
+            <div class="panel-section-title">[02] Routing Core Info</div>
+            
+            <div class="info-tactical-box">
+                <h5><i class="bi bi-shield-check"></i> Direct Support Link</h5>
+                <p>Welcome, Operator. If you encounter bugs inside the IP Analyzer, require elevated node clearance, or want to deploy new sub-modules, dispatch your logs here.</p>
+            </div>
+
+            <div class="soc-field-container">
+                <label>Response Latency</label>
+                <input type="text" value="ESTIMATED < 24 HOURS // ACTIVE" readonly style="opacity: 0.6; color: var(--soc-neon); font-size: 0.95rem;">
+            </div>
+
+            <div class="soc-field-container">
+                <label>Operational Field Station</label>
+                <input type="text" value="CASABLANCA.MA // SOC_L3" readonly style="opacity: 0.5; font-size: 0.95rem;">
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}

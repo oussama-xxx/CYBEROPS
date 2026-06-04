@@ -1,0 +1,192 @@
+{% extends 'analyzer/base.html' %}
+
+{% block content %}
+<style>
+    :root {
+        --terminal-bg: #030712;
+        --terminal-panel: #070d19;
+        --terminal-neon: #00ff99;
+        --terminal-border: rgba(255, 255, 255, 0.05);
+        --text-bright: #ffffff;
+        --text-muted: #64748b;
+        --text-body: #e2e8f0; /* زيادة السطوع باش تبان الكلمة ناضية وقوية */
+    }
+
+    /* FULL CLEAN CONTAINER */
+    .terminal-auth-container {
+        min-height: 85vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--terminal-bg);
+        font-family: 'SF Mono', Monaco, Consolas, 'Liberation Mono', monospace;
+        padding: 5rem 2rem;
+    }
+
+    /* MEGA SYSTEM ACCESS PANEL - قياس ماكسيما عريض ومهيب */
+    .auth-panel-card {
+        width: 100%;
+        max-width: 720px; /* العرض دابا ضخم ومتناسق مع الـ Register Gateway */
+        background: var(--terminal-panel);
+        border: 1px solid var(--terminal-border);
+        border-radius: 8px;
+        padding: 5.5rem 5rem; /* مساحات تكتيكية عريضة لداخل */
+        box-shadow: 0 35px 70px -15px rgba(0, 0, 0, 0.9);
+    }
+
+    .auth-panel-header {
+        margin-bottom: 4rem;
+    }
+    .auth-panel-header h3 {
+        color: var(--text-bright);
+        font-size: 2.6rem; /* عنوان ضخم جداً عاطي العين */
+        font-weight: 700;
+        margin: 0 0 1rem 0;
+        letter-spacing: -0.5px;
+    }
+    .auth-panel-header p {
+        color: var(--terminal-neon);
+        font-size: 1.1rem; /* سابتايتل واضح وباين */
+        letter-spacing: 0.5px;
+        margin: 0;
+    }
+
+    /* TECHNICAL ADVANCED FORMS */
+    .field-wrapper {
+        margin-bottom: 3rem; /* فراغات متباعدة لراحة العين */
+    }
+    .field-wrapper label {
+        display: block;
+        font-size: 1.1rem; /* كبرنا الـ Labels مزيان */
+        font-weight: 600;
+        color: var(--text-body);
+        letter-spacing: 1.5px;
+        margin-bottom: 1.2rem;
+        text-transform: uppercase;
+    }
+    .field-wrapper input {
+        width: 100%;
+        padding: 1.5rem 1.6rem; /* الـ input واسع بزاف ومريح فـ الكليك والكتابة */
+        background: #02040a;
+        border: 1px solid var(--terminal-border);
+        border-radius: 6px;
+        color: var(--text-bright);
+        font-size: 1.35rem; /* الخط لداخل كبير وواضح بامتياز */
+        font-family: inherit;
+        transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .field-wrapper input:focus {
+        outline: none;
+        border-color: var(--terminal-neon);
+        box-shadow: 0 0 22px rgba(0, 255, 153, 0.12);
+    }
+
+    /* CONTROL ROW INTERFACE */
+    .control-interface-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: 2.5rem 0 4.5rem 0;
+        font-size: 1.1rem; /* تكبير كاع الروابط المساعدة */
+    }
+    .checkbox-container {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        cursor: pointer;
+        color: var(--text-body);
+    }
+    .checkbox-container input {
+        width: 22px; /* كبرنا الـ Checkbox باش تجي متناسقة مع الحجم الجديد */
+        height: 22px;
+        accent-color: var(--terminal-neon);
+    }
+    .forgot-link {
+        color: var(--text-muted);
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .forgot-link:hover {
+        color: var(--text-bright);
+    }
+
+    /* HEAVY SUBMIT COMMAND ACTION */
+    .btn-terminal-submit {
+        width: 100%;
+        padding: 1.5rem; /* زر عريض وقوي */
+        background: transparent;
+        border: 1px solid var(--terminal-neon);
+        color: var(--terminal-neon);
+        font-family: inherit;
+        font-weight: 700;
+        font-size: 1.25rem; /* خط عريض وبارز للزر */
+        letter-spacing: 2px;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.15s ease;
+        text-transform: uppercase;
+    }
+    .btn-terminal-submit:hover {
+        background: rgba(0, 255, 153, 0.05);
+        box-shadow: 0 0 30px rgba(0, 255, 153, 0.18);
+    }
+
+    /* REDIRECT FOOTER */
+    .panel-redirect-footer {
+        margin-top: 4.5rem;
+        padding-top: 2.5rem;
+        border-top: 1px solid rgba(255, 255, 255, 0.03);
+        text-align: center;
+        font-size: 1.1rem;
+    }
+    .panel-redirect-footer p {
+        color: var(--text-muted);
+        margin: 0 0 0.8rem 0;
+    }
+    .panel-redirect-footer a {
+        color: var(--text-bright);
+        text-decoration: none;
+        font-weight: 600;
+    }
+    .panel-redirect-footer a:hover {
+        color: var(--terminal-neon);
+    }
+</style>
+
+<div class="terminal-auth-container">
+    <div class="auth-panel-card">
+        <div class="auth-panel-header">
+            <h3>Authentication</h3>
+            <p>>_ Secure terminal session initialization</p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="field-wrapper">
+                <label>Operator Identity</label>
+                <input type="text" name="username" autocomplete="off" placeholder="Enter operator ID..." required autofocus>
+            </div>
+            
+            <div class="field-wrapper">
+                <label>Security Access Cipher</label>
+                <input type="password" name="password" placeholder="Enter access cipher..." required>
+            </div>
+
+            <div class="control-interface-row">
+                <label class="checkbox-container">
+                    <input type="checkbox" name="remember_me">
+                    <span>Remember node identity</span>
+                </label>
+                <a href="#" class="forgot-link">Forgot cipher?</a>
+            </div>
+
+            <button type="submit" class="btn-terminal-submit">INITIALIZE_SESSION()</button>
+        </form>
+
+        <div class="panel-redirect-footer">
+            <p>Need access credentials?</p>
+            <a href="{% url 'analyzer:register' %}">[REQUEST_NEW_PROVISIONING]</a>
+        </div>
+    </div>
+</div>
+{% endblock %}

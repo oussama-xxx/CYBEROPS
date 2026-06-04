@@ -1,0 +1,253 @@
+{% extends 'analyzer/base.html' %}
+{% block content %}
+
+<div class="container-fluid font-monospace text-light px-4 py-3 soc-dashboard-wrapper">
+    
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="soc-card p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div>
+                    <h5 class="theme-glow-text mb-1 fw-bold"><i class="bi bi-link-45deg me-2"></i>CYBEROPS PLATFORM // DEEP URL SCANNER</h5>
+                    <p class="soc-label-muted small mb-0">SYS_STATUS: <span class="text-theme-success fw-bold">● ONLINE [RECON_MODE]</span></p>
+                </div>
+                
+                <form method="POST" class="m-0 flex-grow-1 flex-md-grow-0" style="min-width: 400px;">
+                    {% csrf_token %}
+                    <div class="input-group border-theme p-1" style="background-color: #000000;">
+                        <span class="input-group-text bg-transparent border-0 text-theme-success fw-bold">> HTTP://~#</span>
+                        <input type="text" name="url" class="form-control bg-transparent text-white border-0 soc-field font-monospace" 
+                               placeholder="[target_url_to_analyze]" value="{{ scan_result.url|default:'' }}" required autocomplete="off">
+                        <button class="btn btn-theme-success text-black fw-bold px-4" type="submit">SCAN_TARGET</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if scan_result %}
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="soc-banner-card p-4 position-relative overflow-hidden 
+                {% if scan_result.verdict == 'danger' %}border-danger-theme bg-danger-soft-theme banner-border-danger
+                {% elif scan_result.verdict == 'suspicious' %}border-warning-theme bg-warning-soft-theme banner-border-warning
+                {% else %}border-success-theme bg-success-soft-theme banner-border-success{% endif %}">
+                
+                <div class="row align-items-center">
+                    <div class="col-md-6 text-center text-md-start">
+                        <span class="badge mb-2 tracking-widest px-2 py-1 rounded-0 status-tag
+                              {% if scan_result.verdict == 'danger' %}status-danger
+                              {% elif scan_result.verdict == 'suspicious' %}status-warning
+                              {% else %}status-success{% endif %}">
+                            [{{ scan_result.verdict|upper }}_TARGET_IDENTIFIED]
+                        </span>
+                        <div class="display-6 text-white fw-bold tracking-wider text-truncate raw-url-glow">{{ scan_result.url }}</div>
+                    </div>
+                    
+                    <div class="col-md-6 border-start-md border-theme-dark-soft ps-md-4 mt-3 mt-md-0 text-center text-md-end">
+                        <div class="d-inline-block text-center px-4 py-2 bg-black border border-theme-dark-soft">
+                            <div class="soc-label-muted small mb-1">// SECURITY_INDEX:</div>
+                            <h2 class="fw-bold m-0 {% if scan_result.verdict == 'danger' %}text-theme-danger
+                                {% elif scan_result.verdict == 'suspicious' %}text-theme-warning
+                                {% else %}text-theme-success{% endif %}">
+                                {{ scan_result.risk_score }}% RISK
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-7 col-12">
+            <div class="soc-card p-3 h-100">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3 d-flex justify-content-between align-items-center">
+                    <span class="text-theme-success fw-bold"><i class="bi bi-activity me-2"></i>URL TELEMETRY & DOMAIN INTELLIGENCE</span>
+                    <span class="badge bg-black border border-theme-success text-theme-success small px-2 rounded-0">LIVE ANALYSIS</span>
+                </div>
+                
+                <div class="row g-2 small font-monospace">
+                    <div class="col-sm-6 border-bottom border-theme-dark-soft pb-2">
+                        <span class="soc-label-muted d-block">> Domain Authority / Age:</span>
+                        <span class="text-white fw-bold">{{ scan_result.domain_age|default:"N/A" }}</span>
+                    </div>
+                    <div class="col-sm-6 border-bottom border-theme-dark-soft pb-2">
+                        <span class="soc-label-muted d-block">> Registrar Entity:</span>
+                        <span class="text-white fw-bold text-truncate d-block">{{ scan_result.registrar|default:"Unknown Registry" }}</span>
+                    </div>
+                    <div class="col-sm-6 border-bottom border-theme-dark-soft pt-1 pb-2">
+                        <span class="soc-label-muted d-block">> SSL TLS Certificate:</span>
+                        <span class="fw-bold {% if scan_result.ssl_valid %}text-theme-success{% else %}text-theme-danger{% endif %}">
+                            {% if scan_result.ssl_valid %}🟢 ACTIVE // {{ scan_result.ssl_issuer }}{% else %}🔴 EXPIRED / INVALID CERT{% endif %}
+                        </span>
+                    </div>
+                    <div class="col-sm-6 border-bottom border-theme-dark-soft pt-1 pb-2">
+                        <span class="soc-label-muted d-block">> Final Destination IP:</span>
+                        <span class="text-theme-success fw-bold">{{ scan_result.resolved_ip|default:"0.0.0.0" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5 col-12">
+            <div class="soc-card p-3 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="border-bottom border-theme-dark-soft pb-2 mb-3 d-flex justify-content-between align-items-center">
+                        <span class="text-theme-success fw-bold"><i class="bi bi-shield-check me-2"></i>ANTIVIRUS DETECTIONS FLAGGED</span>
+                        <span class="text-muted small">[API_FEED]</span>
+                    </div>
+                    
+                    <div class="small lh-lg">
+                        <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-2">
+                            <span class="soc-label-muted">> VirusTotal URL Feed:</span>
+                            <span class="fw-bold {% if scan_result.vt_positives > 0 %}text-theme-danger{% else %}text-theme-success{% endif %}">
+                                {{ scan_result.vt_positives }} / {{ scan_result.vt_total }} Engines
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-2">
+                            <span class="soc-label-muted">> Google Safe Browsing:</span>
+                            <span class="fw-bold {% if scan_result.gsb_flagged %}text-theme-danger{% else %}text-theme-success{% endif %}">
+                                {% if scan_result.gsb_flagged %}UNSAFE // PHISHING{% else %}CLEAN // SECURE{% endif %}
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between py-2">
+                            <span class="soc-label-muted">> PhishTank Blacklist Status:</span>
+                            <span class="fw-bold {% if scan_result.phish_flagged %}text-theme-danger{% else %}text-theme-success{% endif %}">
+                                {% if scan_result.phish_flagged %}BLACKLISTED{% else %}NOT_LISTED{% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="soc-card p-3">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3 d-flex justify-content-between align-items-center">
+                    <span class="text-theme-success fw-bold"><i class="bi bi-terminal-fill me-2"></i>VERDICT_JUSTIFICATION_LOGS // WHY WAS THIS FLAGGED?</span>
+                    <span class="badge border text-theme-warning border-warning-theme bg-warning-soft-theme small px-2 rounded-0">EXPLANATION FEED</span>
+                </div>
+
+                <div class="console-scroll-soc p-3 bg-black border border-theme-dark-soft" style="max-height: 250px; overflow-y: auto;">
+                    <div class="d-flex flex-column gap-2 font-monospace" style="font-size: 0.85rem;">
+                        {% for log in scan_result.explanation_logs %}
+                        <div class="d-flex align-items-start gap-2 border-bottom border-theme-dark-soft pb-2 mb-1">
+                            <span class="fw-bold {% if log.type == 'danger' %}text-theme-danger
+                                          {% elif log.type == 'warning' %}text-theme-warning
+                                          {% else %}text-theme-success{% endif %}">
+                                [{{ log.timestamp }}] [{{ log.module|upper }}]
+                            </span>
+                            <div class="text-white">
+                                <span class="soc-label-muted">></span> {{ log.message }}
+                            </div>
+                        </div>
+                        {% empty %}
+                        <div class="text-muted">[NO LIVE SIGNATURE LOGS INJECTED]</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<style>
+    /* CSS ENGINE OVERRIDES FOR THE PERFECT FINISH */
+    html, body {
+        background-color: #04070a !important; /* Unified with deep black base */
+        color: #e2e8f0 !important;
+    }
+    
+    /* Clearance safety wrapper to prevent cut-off bottom borders */
+    .soc-dashboard-wrapper {
+        background: radial-gradient(circle at top right, rgba(16, 27, 22, 0.15), rgba(4, 7, 10, 1)) !important;
+        padding-bottom: 80px !important; 
+    }
+    
+    .soc-label-muted { color: #8fa0b0 !important; }
+    .text-theme-success { color: #00ff99 !important; }
+    .text-theme-warning { color: #ffaa00 !important; }
+    .text-theme-danger { color: #ff3366 !important; }
+    
+    .theme-glow-text {
+        color: #00ff99 !important;
+        text-shadow: 0 0 12px rgba(0, 255, 153, 0.35);
+    }
+    .raw-url-glow { text-shadow: 0 0 15px rgba(255, 255, 255, 0.1); }
+
+    .status-tag {
+        font-size: 0.7rem !important;
+    }
+
+    .status-danger {
+        background: rgba(255,51,102,0.15) !important;
+        color: #ff3366 !important;
+        border: 1px solid #ff3366 !important;
+    }
+
+    .status-warning {
+        background: rgba(255,170,0,0.15) !important;
+        color: #ffaa00 !important;
+        border: 1px solid #ffaa00 !important;
+    }
+
+    .status-success {
+        background: rgba(0,255,153,0.15) !important;
+        color: #00ff99 !important;
+        border: 1px solid #00ff99 !important;
+    }
+
+    .banner-border-danger { border-left: 5px solid var(--soc-neon-danger, #ff3366) !important; }
+    .banner-border-warning { border-left: 5px solid var(--soc-neon-warning, #ffaa00) !important; }
+    .banner-border-success { border-left: 5px solid var(--soc-neon-green, #00ff99) !important; }
+
+    .btn-theme-success {
+        background-color: #00ff99 !important;
+        border-color: #00ff99 !important;
+        color: #000000 !important;
+        border-radius: 0px !important; /* Pure industrial tech shape */
+    }
+    .btn-theme-success:hover {
+        background-color: #00e676 !important;
+        box-shadow: 0 0 15px rgba(0, 255, 153, 0.5);
+    }
+
+    /* Strict 0px industrial tactical edges */
+    .soc-card {
+        background-color: #090e15 !important;
+        border: 2px solid #1a293d !important;
+        border-radius: 0px !important;
+    }
+    
+    .soc-banner-card { 
+        border-radius: 0px !important; 
+        border: 2px solid #1a293d !important; 
+    }
+    
+    .border-theme { border: 2px solid #00ff99 !important; }
+    
+    .border-success-theme { border-color: rgba(0, 255, 153, 0.4) !important; }
+    .border-warning-theme { border-color: rgba(255, 170, 0, 0.4) !important; }
+    .border-danger-theme { border-color: rgba(255, 51, 102, 0.4) !important; }
+
+    .bg-success-soft-theme { background: linear-gradient(135deg, #0d221a 0%, #04070a 100%) !important; }
+    .bg-warning-soft-theme { background: linear-gradient(135deg, #2b1f0d 0%, #04070a 100%) !important; }
+    .bg-danger-soft-theme { background: linear-gradient(135deg, #2d0f0f 0%, #04070a 100%) !important; }
+    
+    .border-theme-dark-soft { border-color: #1a293d !important; }
+    
+    @media (min-width: 768px) {
+        .border-start-md { border-left: 2px solid #1a293d !important; }
+    }
+    
+    /* Scrollbar fixes for inside the console box */
+    .console-scroll-soc::-webkit-scrollbar { width: 6px; }
+    .console-scroll-soc::-webkit-scrollbar-track { background: #04070a; }
+    .console-scroll-soc::-webkit-scrollbar-thumb { background: #1a293d; border-radius: 0px; }
+    .console-scroll-soc::-webkit-scrollbar-thumb:hover { background: #00ff99; }
+</style>
+{% endblock %}

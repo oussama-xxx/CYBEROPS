@@ -1,0 +1,791 @@
+{% extends 'analyzer/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-2">
+    
+    <!-- ===================================================================== -->
+    <!-- HEADER HUD SECTION -->
+    <!-- ===================================================================== -->
+    <!-- ===================================================================== -->
+    <!-- HEADER HUD SECTION -->
+    <!-- ===================================================================== -->
+    <div class="soc-glass-panel mb-4 p-3 border-theme-dark-soft position-relative overflow-hidden">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center position-relative" style="z-index: 2;">
+            <div>
+                <h1 class="text-theme-success mb-0 tracking-widest fw-black fs-4 text-glow-cyber">
+                    <i class="bi bi-terminal-fill"></i> CYBEROPS // SECURE_SHELL_NODE
+                </h1>
+                <p class="text-muted mb-0 small mt-1">
+                    Multi-Session CLI Console Terminal Emulator // Active Operator Key: <span class="text-theme-success">KEY_2026_SEC_OP</span>
+                </p>
+            </div>
+            <div class="font-monospace text-end d-none d-md-block text-muted small">
+                SSH TUNNEL: <span class="text-theme-success text-glow-cyber">ENCRYPTED // AES-GCM-256</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MAIN WORKSPACE SPLIT (Left side: host list, Right side: terminal window) -->
+    <!-- ===================================================================== -->
+    <div class="row g-4">
+        
+        <!-- Left Side: Node Connection Manager (MobaXterm style) -->
+        <div class="col-lg-3">
+            <div class="soc-glass-panel p-3 h-100 border-theme-dark-soft" style="background: rgba(8, 12, 18, 0.95);">
+                <div class="d-flex align-items-center justify-content-between border-bottom border-theme-dark-soft pb-2 mb-3">
+                    <span class="font-monospace tracking-wide text-theme-success" style="font-size: 0.85rem; font-weight: bold;">
+                        <i class="bi bi-list-stars"></i> SESSION MANAGER
+                    </span>
+                    <span class="badge bg-success-opacity text-theme-success" style="font-size: 0.7rem;">100% SECURE</span>
+                </div>
+                
+                <!-- Quick Search Host -->
+                <div class="mb-3">
+                    <input type="text" id="hostSearchInput" class="form-control form-control-sm bg-black-opacity border-theme-dark-soft font-monospace text-theme-success text-center" placeholder="FILTER SESSION HOSTS..." onkeydown="handleSearchKeyDown(event)" onkeyup="filterHosts()">
+                </div>
+
+                <!-- Host Session Tree -->
+                <div class="host-session-list d-flex flex-column gap-2" id="sessionListContainer" style="max-height: 550px; overflow-y: auto;">
+                    {% for host in hosts %}
+                    <div class="host-session-item d-flex align-items-center justify-content-between p-2 cursor-pointer border border-theme-dark-soft rounded transition-all" 
+                         id="session-{{ host.id }}" onclick="openHostTerminal('{{ host.id }}', '{{ host.name }}', '{{ host.ip }}', '{{ host.type }}')"
+                         style="background: rgba(12, 20, 30, 0.5);">
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="device-icon text-muted" style="font-size: 1.1rem;">
+                                {% if host.type == 'router' %}<i class="bi bi-router-fill"></i>
+                                {% elif host.type == 'firewall' %}<i class="bi bi-shield-lock-fill text-warning"></i>
+                                {% elif host.type == 'switch' %}<i class="bi bi-hub"></i>
+                                {% else %}<i class="bi bi-database-fill"></i>
+                                {% endif %}
+                            </span>
+                            <div class="font-monospace">
+                                <div class="host-name text-light fw-bold" style="font-size: 0.85rem;">{{ host.name }}</div>
+                                <div class="host-ip text-muted" style="font-size: 0.75rem;">{{ host.ip }}</div>
+                            </div>
+                        </div>
+                        <span class="node-status-dot {% if host.status == 'online' %}dot-green{% elif host.status == 'warning' %}dot-orange{% else %}dot-red{% endif %}"></span>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="mt-4 pt-3 border-top border-theme-dark-soft text-center font-monospace" style="font-size: 0.7rem;">
+                    <div class="text-muted">SYSTEM STATUS: <span class="text-theme-success">OPERATIONAL</span></div>
+                    <div class="text-muted mt-1">SESSION MANAGER v1.14</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side: Terminal Workspace -->
+        <div class="col-lg-9">
+            <div class="soc-glass-panel p-0 border-theme-dark-soft overflow-hidden d-flex flex-column" style="height: 680px; background: #03060a; border-radius: 4px;">
+                
+                <!-- Terminal Sessions Tab Bar -->
+                <div class="terminal-tab-bar d-flex align-items-center border-bottom border-theme-dark-soft" id="tabBarContainer" style="background: #060a0f; overflow-x: auto; height: 42px;">
+                    <!-- Placeholder when no tab is open -->
+                    <div class="px-3 font-monospace text-muted small" id="noTabsMsg" style="line-height: 42px;">
+                        <i class="bi bi-info-circle-fill me-1"></i> No active SSH sessions. Select a host from Session Manager to initiate tunnel.
+                    </div>
+                </div>
+
+                <!-- Terminal Screens Wrapper -->
+                <div class="terminal-screen-wrapper flex-grow-1 p-3 font-monospace position-relative" id="terminalScreensContainer" style="overflow-y: auto; background: #020407;">
+                    
+                    <!-- Scan lines overlay for terminal effect -->
+                    <div class="terminal-scanlines"></div>
+                    
+                    <!-- Welcome / Default screen -->
+                    <div class="welcome-screen d-flex flex-column align-items-center justify-content-center h-100 text-center text-muted" id="welcomeTerminalScreen">
+                        <div class="matrix-glitch-logo fs-1 mb-2 text-theme-success"><i class="bi bi-terminal text-glow-cyber"></i></div>
+                        <h4 class="text-light uppercase tracking-widest font-monospace" style="font-size: 1.1rem;">CYBEROPS CORE OPERATIONS GATEWAY</h4>
+                        <p class="small font-monospace px-4 mt-2" style="max-width: 500px;">
+                            Establish remote command-line interfaces to internal routers, switches, firewalls, and server resources. All sessions are monitored by SEC-OPS IDS.
+                        </p>
+                        <div class="mt-3 border border-theme-dark-soft p-2 rounded" style="background: rgba(10, 15, 25, 0.4); max-width: 450px;">
+                            <div class="text-theme-success small text-start">// AVAILABLE GLOBAL MANAGEMENT UTILS:</div>
+                            <div class="text-light small text-start mt-1 font-monospace" style="font-size: 0.75rem;">
+                                &bull; <kbd class="bg-dark text-theme-success">ping &lt;host_ip&gt;</kbd> - Audit routing connectivity<br>
+                                &bull; <kbd class="bg-dark text-theme-success">nmap &lt;host_ip&gt;</kbd> - Audit open service ports<br>
+                                &bull; <kbd class="bg-dark text-theme-success">status</kbd> - Fetch target resource statistics<br>
+                                &bull; <kbd class="bg-dark text-theme-success">block ip &lt;target_ip&gt;</kbd> - Push alert blacklist request to DB
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Dynamic Host Console Sessions will be appended here -->
+                </div>
+
+                <!-- CLI Input Command Line -->
+                <div class="terminal-cli-input-bar border-top border-theme-dark-soft d-flex align-items-center px-3 position-relative" style="height: 50px; background: #05080c;">
+                    <span class="text-theme-success font-weight-bold font-monospace me-2" id="cliPromptIndicator">visitor@cyberops:~$</span>
+                    <div class="position-relative flex-grow-1 d-flex align-items-center overflow-hidden">
+                        <input type="text" id="cliInputField" class="w-100 bg-transparent border-0 text-light font-monospace" 
+                               placeholder="Type command (or 'help' for options) and press Enter..." disabled
+                               onkeydown="handleCliKeyPress(event)" style="outline: none; caret-color: transparent;">
+                        <span class="terminal-visual-caret" id="visualCaret"></span>
+                    </div>
+                    <div class="text-muted small font-monospace d-none d-md-block ms-2" style="font-size: 0.75rem;">
+                        <kbd class="bg-dark border border-theme-dark-soft text-muted px-1 me-1">TAB</kbd>Autocomplete &nbsp;
+                        <i class="bi bi-keyboard-fill"></i> INPUT_BUFFER
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- CSS Styles for Console Terminal -->
+<style>
+    /* Status dots */
+    .node-status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+    }
+    .dot-green { background: #00ff99; box-shadow: 0 0 8px rgba(0, 255, 153, 0.6); }
+    .dot-orange { background: #ffaa00; box-shadow: 0 0 8px rgba(255, 170, 0, 0.6); }
+    .dot-red { background: #ff3366; box-shadow: 0 0 8px rgba(255, 51, 102, 0.6); }
+    
+    /* Session manager hover */
+    .host-session-item:hover {
+        border-color: var(--soc-neon-green) !important;
+        background: rgba(0, 255, 153, 0.05) !important;
+    }
+    .host-session-item.active-session {
+        border-color: var(--soc-neon-green) !important;
+        background: rgba(0, 255, 153, 0.15) !important;
+    }
+
+    /* Terminal tab styling */
+    .terminal-tab {
+        line-height: 42px;
+        padding: 0 20px;
+        background: #04070a;
+        color: var(--soc-text-dimmed);
+        border-right: 1px solid var(--soc-thick-border);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: all 0.2s;
+        font-size: 0.8rem;
+    }
+    .terminal-tab:hover {
+        background: #090e15;
+        color: #ffffff;
+    }
+    .terminal-tab.active-tab {
+        background: #020407;
+        color: var(--soc-neon-green);
+        border-bottom: 2px solid var(--soc-neon-green);
+        font-weight: bold;
+    }
+    .terminal-tab .tab-close-btn {
+        opacity: 0.6;
+        cursor: pointer;
+        transition: opacity 0.2s;
+    }
+    .terminal-tab .tab-close-btn:hover {
+        opacity: 1;
+        color: var(--soc-neon-danger);
+    }
+
+    /* Screen outputs */
+    .console-session-screen {
+        display: none;
+        flex-direction: column;
+        height: 100%;
+        overflow-y: auto;
+    }
+    .console-session-screen.active-screen {
+        display: flex;
+    }
+    .terminal-stdout-line {
+        margin-bottom: 4px;
+        line-height: 1.4;
+        word-break: break-all;
+        white-space: pre-wrap;
+    }
+    .text-stdout-cmd {
+        color: #00ffaa;
+        font-weight: bold;
+    }
+    .text-stdout-error {
+        color: #ff3366;
+    }
+    .text-stdout-success {
+        color: #00ff99;
+    }
+    .text-stdout-system {
+        color: #7a8f9a;
+        font-style: italic;
+    }
+
+    /* Blinking Caret */
+    .terminal-visual-caret {
+        position: absolute;
+        width: 8px;
+        height: 17px;
+        background-color: #00ff99;
+        display: none;
+        animation: terminal-caret-blink 1s steps(2, start) infinite;
+        pointer-events: none;
+        box-shadow: 0 0 4px rgba(0, 255, 153, 0.8);
+    }
+
+    @keyframes terminal-caret-blink {
+        0%, 100% { opacity: 0; }
+        50% { opacity: 1; }
+    }
+
+    .text-glow-cyber {
+        text-shadow: 0 0 10px rgba(0, 255, 153, 0.4);
+    }
+
+    /* Scanlines effect */
+    .terminal-scanlines {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+        background-size: 100% 3px, 6px 100%;
+        z-index: 10;
+        pointer-events: none;
+        opacity: 0.45;
+    }
+    
+    kbd {
+        font-family: 'Consolas', monospace;
+        font-size: 0.75rem;
+    }
+</style>
+
+<!-- Session management & Simulated Interpreter JavaScript -->
+<script>
+    const activeSessions = {};
+    let activeHostId = null;
+
+    // Command History & Autocomplete lists
+    const globalCommands = ['help', '?', 'clear', 'status', 'ping', 'traceroute', 'nmap', 'block ip'];
+    const deviceSpecificCommands = {
+        'router': ['show run', 'show ip route'],
+        'firewall': ['show run', 'show access-list'],
+        'switch': ['show run', 'show mac-table'],
+        'server': ['systemctl status', 'docker ps']
+    };
+
+    function getAvailableCommands(hostId) {
+        const session = activeSessions[hostId];
+        if (!session) return globalCommands;
+        const specifics = deviceSpecificCommands[session.type] || [];
+        return [...globalCommands, ...specifics];
+    }
+
+    function filterHosts() {
+        const query = document.getElementById('hostSearchInput').value.toLowerCase();
+        const items = document.querySelectorAll('.host-session-item');
+        
+        items.forEach(item => {
+            const hostName = item.querySelector('.host-name').textContent.toLowerCase();
+            const hostIp = item.querySelector('.host-ip').textContent.toLowerCase();
+            if (hostName.includes(query) || hostIp.includes(query)) {
+                item.style.display = 'flex';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function handleSearchKeyDown(event) {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            // Open the first matching search node
+            const items = Array.from(document.querySelectorAll('.host-session-item')).filter(i => i.style.display !== 'none');
+            if (items.length > 0) {
+                items[0].click();
+            }
+        }
+    }
+
+    function openHostTerminal(hostId, hostName, hostIp, hostType) {
+        // Toggle welcome screen
+        document.getElementById('welcomeTerminalScreen').style.display = 'none';
+        document.getElementById('noTabsMsg').style.display = 'none';
+        
+        // Mark session item as active in tree
+        document.querySelectorAll('.host-session-item').forEach(item => {
+            item.classList.remove('active-session');
+        });
+        document.getElementById(`session-${hostId}`).classList.add('active-session');
+
+        // Check if session tab already exists
+        if (!activeSessions[hostId]) {
+            // Create tab
+            const tabContainer = document.getElementById('tabBarContainer');
+            const tabHtml = `
+                <div class="terminal-tab" id="tab-${hostId}" onclick="switchSession('${hostId}')">
+                    <i class="bi bi-terminal-split"></i>
+                    <span>${hostName}</span>
+                    <i class="bi bi-x-lg tab-close-btn" onclick="closeSession(event, '${hostId}')"></i>
+                </div>
+            `;
+            tabContainer.insertAdjacentHTML('beforeend', tabHtml);
+
+            // Create Screen Output Container
+            const screensContainer = document.getElementById('terminalScreensContainer');
+            const connectionTime = new Date().toUTCString();
+            const screenHtml = `
+                <div class="console-session-screen" id="screen-${hostId}">
+                    <div class="terminal-stdout-line text-stdout-system">--- Session Tunnel Opened: SSH Client v4.11-OpenSSL ---</div>
+                    <div class="terminal-stdout-line text-stdout-system">Connecting to ${hostName} [${hostIp}] on SSH Port 22...</div>
+                    <div class="terminal-stdout-line text-stdout-system">Handshake complete. Negotiated cipher: Chacha20-Poly1305.</div>
+                    <div class="terminal-stdout-line text-stdout-system">Authentication key verified for security_operator. Session logged.</div>
+                    <div class="terminal-stdout-line text-stdout-success">Connection Established successfully at ${connectionTime}.</div>
+                    <div class="terminal-stdout-line text-muted">--------------------------------------------------------------</div>
+                    <div class="terminal-stdout-line text-light">Welcome to the remote shell environment of ${hostName}.</div>
+                    <div class="terminal-stdout-line text-light">Run "help" or "?" to inspect administrative command bindings.</div>
+                    <div class="terminal-stdout-line text-muted">--------------------------------------------------------------</div>
+                </div>
+            `;
+            screensContainer.insertAdjacentHTML('beforeend', screenHtml);
+
+            activeSessions[hostId] = {
+                name: hostName,
+                ip: hostIp,
+                type: hostType,
+                history: [],
+                historyIndex: -1,
+                scrollOffset: 0
+            };
+        }
+
+        // Switch to the session
+        switchSession(hostId);
+    }
+
+    function switchSession(hostId) {
+        activeHostId = hostId;
+        
+        // Set active tabs
+        document.querySelectorAll('.terminal-tab').forEach(tab => {
+            tab.classList.remove('active-tab');
+        });
+        document.getElementById(`tab-${hostId}`).classList.add('active-tab');
+
+        // Set active screens
+        document.querySelectorAll('.console-session-screen').forEach(screen => {
+            screen.classList.remove('active-screen');
+        });
+        document.getElementById(`screen-${hostId}`).classList.add('active-screen');
+
+        // Set prompt
+        const session = activeSessions[hostId];
+        document.getElementById('cliPromptIndicator').textContent = `admin@${session.name.toLowerCase()}:~$`;
+
+        // Enable and focus input field
+        const inputField = document.getElementById('cliInputField');
+        inputField.disabled = false;
+        inputField.focus();
+
+        // Update visual caret position
+        updateVisualCaret();
+
+        // Scroll active screen to bottom
+        const activeScreen = document.getElementById(`screen-${hostId}`);
+        activeScreen.scrollTop = activeScreen.scrollHeight;
+    }
+
+    function closeSession(event, hostId) {
+        event.stopPropagation(); // Stop click from triggering switchSession
+        
+        // Remove tab element
+        const tab = document.getElementById(`tab-${hostId}`);
+        tab.remove();
+
+        // Remove screen element
+        const screen = document.getElementById(`screen-${hostId}`);
+        screen.remove();
+
+        // Delete from list
+        delete activeSessions[hostId];
+
+        // Adjust active state
+        const remainingKeys = Object.keys(activeSessions);
+        if (remainingKeys.length > 0) {
+            switchSession(remainingKeys[remainingKeys.length - 1]);
+        } else {
+            // No sessions left
+            activeHostId = null;
+            document.getElementById('welcomeTerminalScreen').style.display = 'flex';
+            document.getElementById('noTabsMsg').style.display = 'block';
+            document.getElementById('cliPromptIndicator').textContent = 'visitor@cyberops:~$';
+            
+            const inputField = document.getElementById('cliInputField');
+            inputField.value = '';
+            inputField.disabled = true;
+
+            const caret = document.getElementById('visualCaret');
+            caret.style.display = 'none';
+
+            document.querySelectorAll('.host-session-item').forEach(item => {
+                item.classList.remove('active-session');
+            });
+        }
+    }
+
+    // Caret Tracking logic
+    const cliInput = document.getElementById('cliInputField');
+    const visualCaret = document.getElementById('visualCaret');
+
+    function updateVisualCaret() {
+        if (!activeHostId || cliInput.disabled) {
+            visualCaret.style.display = 'none';
+            return;
+        }
+        visualCaret.style.display = 'inline-block';
+        
+        // Create an off-screen span to calculate typing text width exactly
+        const tempSpan = document.createElement('span');
+        tempSpan.style.fontFamily = 'monospace';
+        tempSpan.style.fontSize = window.getComputedStyle(cliInput).fontSize;
+        tempSpan.style.whiteSpace = 'pre';
+        tempSpan.style.visibility = 'hidden';
+        tempSpan.style.position = 'absolute';
+        
+        // Extract substring up to cursor position
+        const textBeforeCursor = cliInput.value.substring(0, cliInput.selectionStart);
+        tempSpan.textContent = textBeforeCursor || '';
+        document.body.appendChild(tempSpan);
+        
+        const textWidth = tempSpan.getBoundingClientRect().width;
+        document.body.removeChild(tempSpan);
+
+        visualCaret.style.left = `${textWidth}px`;
+    }
+
+    cliInput.addEventListener('input', updateVisualCaret);
+    cliInput.addEventListener('click', updateVisualCaret);
+    cliInput.addEventListener('keyup', updateVisualCaret);
+    cliInput.addEventListener('focus', () => {
+        updateVisualCaret();
+    });
+    cliInput.addEventListener('blur', () => {
+        visualCaret.style.display = 'none';
+    });
+
+    function handleCliKeyPress(event) {
+        const hostId = activeHostId;
+        const session = activeSessions[hostId];
+        if (!session) return;
+
+        if (event.key === 'Enter') {
+            const command = cliInput.value.trim();
+            if (command) {
+                // Add to history
+                session.history.push(command);
+                session.historyIndex = session.history.length;
+                executeSimulatedCommand(command);
+                cliInput.value = '';
+                updateVisualCaret();
+            }
+        } else if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            if (session.history.length > 0 && session.historyIndex > 0) {
+                session.historyIndex--;
+                cliInput.value = session.history[session.historyIndex];
+                setTimeout(updateVisualCaret, 10);
+            }
+        } else if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            if (session.history.length > 0 && session.historyIndex < session.history.length - 1) {
+                session.historyIndex++;
+                cliInput.value = session.history[session.historyIndex];
+                setTimeout(updateVisualCaret, 10);
+            } else {
+                session.historyIndex = session.history.length;
+                cliInput.value = '';
+                setTimeout(updateVisualCaret, 10);
+            }
+        } else if (event.key === 'Tab') {
+            event.preventDefault();
+            const currentVal = cliInput.value.toLowerCase();
+            const commands = getAvailableCommands(hostId);
+            
+            // Find matches
+            const matches = commands.filter(cmd => cmd.startsWith(currentVal));
+            if (matches.length === 1) {
+                cliInput.value = matches[0];
+                setTimeout(updateVisualCaret, 10);
+            } else if (matches.length > 1) {
+                // List options to screen
+                writeToConsole(hostId, `admin@${session.name.toLowerCase()}:~$ ${cliInput.value}`, 'text-stdout-cmd');
+                writeToConsole(hostId, matches.join('    '), 'text-muted font-monospace');
+            }
+        }
+    }
+
+    function writeToConsole(hostId, text, className = '') {
+        const screen = document.getElementById(`screen-${hostId}`);
+        if (screen) {
+            const lineHtml = `<div class="terminal-stdout-line ${className}">${text}</div>`;
+            screen.insertAdjacentHTML('beforeend', lineHtml);
+            screen.scrollTop = screen.scrollHeight;
+        }
+    }
+
+    function executeSimulatedCommand(commandLine) {
+        const hostId = activeHostId;
+        const session = activeSessions[hostId];
+        if (!session) return;
+
+        // Print command echo
+        writeToConsole(hostId, `admin@${session.name.toLowerCase()}:~$ ${commandLine}`, 'text-stdout-cmd');
+
+        const parts = commandLine.split(' ');
+        const baseCmd = parts[0].toLowerCase();
+        const args = parts.slice(1);
+
+        setTimeout(() => {
+            switch (baseCmd) {
+                case 'help':
+                case '?':
+                    writeToConsole(hostId, "--- REMOTE ARCHITECTURE CONSOLE COMMANDS ---");
+                    writeToConsole(hostId, "help / ?            - Show this helper diagnostics utility");
+                    writeToConsole(hostId, "status              - Fetch real-time hardware telemetry values");
+                    writeToConsole(hostId, "ping <ip>           - ICMP Echo audit test to targeted node");
+                    writeToConsole(hostId, "traceroute <ip>     - Trace network hops to destination");
+                    writeToConsole(hostId, "nmap <ip>           - Perform port audit scan against target address");
+                    writeToConsole(hostId, "show run            - Display device startup configuration profile");
+                    writeToConsole(hostId, "block ip <ip>       - Add IP address to DB alert blacklist");
+                    writeToConsole(hostId, "clear               - Flush command buffer and reset output display");
+                    
+                    if (session.type === 'router') {
+                        writeToConsole(hostId, "show ip route       - Print IP routing engine path matrix");
+                    } else if (session.type === 'firewall') {
+                        writeToConsole(hostId, "show access-list    - List security block policies");
+                    } else if (session.type === 'switch') {
+                        writeToConsole(hostId, "show mac-table      - List Layer 2 MAC Address Table database");
+                    } else if (session.type === 'server') {
+                        writeToConsole(hostId, "systemctl status    - Query systemd daemon runtime health");
+                        writeToConsole(hostId, "docker ps           - Inspect container operational nodes");
+                    }
+                    break;
+
+                case 'clear':
+                    const screen = document.getElementById(`screen-${hostId}`);
+                    // Keep just headers
+                    screen.innerHTML = `<div class="terminal-stdout-line text-stdout-system">--- Terminal display buffer cleared by operator ---</div>`;
+                    break;
+
+                case 'status':
+                    writeToConsole(hostId, `RESOURCE STATUS DIAGNOSTIC REPORT // HOST: ${session.name}`);
+                    writeToConsole(hostId, `&bull; CPU Util: ${(Math.random() * 20 + 5).toFixed(1)}% [Nominal]`);
+                    writeToConsole(hostId, `&bull; RAM Alloc: ${(Math.random() * 30 + 15).toFixed(1)}% / 16.0 GB`);
+                    writeToConsole(hostId, `&bull; Uptime: ${Math.floor(Math.random() * 15 + 4)}d, ${Math.floor(Math.random() * 23)}h`);
+                    writeToConsole(hostId, `&bull; SSH Sessions: 1 (Operator Secure Session)`);
+                    writeToConsole(hostId, `&bull; Interface Eth0: Link: UP // Speed: 10 Gbps // Flow Control: Nominal`);
+                    break;
+
+                case 'ping':
+                    if (args.length === 0) {
+                        writeToConsole(hostId, "Error: Destination IP or hostname required. Usage: ping <ip_address>", "text-stdout-error");
+                        break;
+                    }
+                    const pingTarget = args[0];
+                    writeToConsole(hostId, `Sending ICMP packet sequence to ${pingTarget} [56 bytes data]...`);
+                    
+                    let seq = 1;
+                    const interval = setInterval(() => {
+                        if (seq > 4) {
+                            clearInterval(interval);
+                            writeToConsole(hostId, `--- ${pingTarget} ping statistics ---`);
+                            writeToConsole(hostId, `4 packets transmitted, 4 received, 0% packet loss, time 3004ms`);
+                            writeToConsole(hostId, `rtt min/avg/max = 2.12/4.45/8.22 ms`);
+                            return;
+                        }
+                        writeToConsole(hostId, `64 bytes from ${pingTarget}: icmp_seq=${seq} ttl=64 time=${(Math.random() * 5 + 1).toFixed(2)} ms`);
+                        seq++;
+                    }, 500);
+                    break;
+
+                case 'nmap':
+                    if (args.length === 0) {
+                        writeToConsole(hostId, "Error: Destination IP or hostname required. Usage: nmap <ip_address>", "text-stdout-error");
+                        break;
+                    }
+                    const nmapTarget = args[0];
+                    writeToConsole(hostId, `Starting Nmap 7.92 ( https://nmap.org ) at ${new Date().toISOString().slice(0, 19).replace('T', ' ')}`);
+                    writeToConsole(hostId, `Initiating Ping Scan against ${nmapTarget}...`);
+                    
+                    setTimeout(() => {
+                        writeToConsole(hostId, `Host ${nmapTarget} is UP. Scanning top 100 ports...`);
+                        setTimeout(() => {
+                            writeToConsole(hostId, `PORT      STATE    SERVICE`);
+                            writeToConsole(hostId, `22/tcp    open     ssh`);
+                            writeToConsole(hostId, `80/tcp    open     http`);
+                            writeToConsole(hostId, `443/tcp   open     https`);
+                            if (session.type === 'router') {
+                                writeToConsole(hostId, `179/tcp   closed   bgp`);
+                            } else if (session.type === 'server') {
+                                writeToConsole(hostId, `3306/tcp  open     mysql`);
+                                writeToConsole(hostId, `6379/tcp  open     redis`);
+                            } else if (session.type === 'firewall') {
+                                writeToConsole(hostId, `500/udp   open     isakmp`);
+                            }
+                            writeToConsole(hostId, `\nNmap scan report for ${nmapTarget}`);
+                            writeToConsole(hostId, `Host is up (0.0045s latency).`);
+                            writeToConsole(hostId, `Nmap done: 1 IP address scanned in 1.45 seconds`, "text-stdout-success");
+                        }, 800);
+                    }, 500);
+                    break;
+
+                case 'traceroute':
+                    if (args.length === 0) {
+                        writeToConsole(hostId, "Error: Destination target IP required. Usage: traceroute <ip_address>", "text-stdout-error");
+                        break;
+                    }
+                    const traceTarget = args[0];
+                    writeToConsole(hostId, `traceroute to ${traceTarget} (${traceTarget}), 30 hops max, 60 byte packets`);
+                    writeToConsole(hostId, ` 1  192.168.1.254 (192.168.1.254)  1.12 ms  1.42 ms  1.89 ms`);
+                    setTimeout(() => {
+                        writeToConsole(hostId, ` 2  10.0.0.1 (10.0.0.1)  3.12 ms  3.89 ms  4.11 ms`);
+                        setTimeout(() => {
+                            writeToConsole(hostId, ` 3  ${traceTarget} (${traceTarget})  6.45 ms  7.12 ms  8.22 ms [Destination reached]`);
+                        }, 500);
+                    }, 500);
+                    break;
+
+                case 'block':
+                    if (args.length < 2 || args[0].toLowerCase() !== 'ip') {
+                        writeToConsole(hostId, "Error: Invalid syntax. Usage: block ip <ip_address>", "text-stdout-error");
+                        break;
+                    }
+                    const blockTarget = args[1];
+                    writeToConsole(hostId, `[SEC-OPS-API] Broadcasting blacklist request for node: ${blockTarget}...`, "text-stdout-system");
+                    
+                    fetch(`/honeypot/probe/?ip=${blockTarget}&reason=Operator+CLI+Console+Block`)
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.status === "CAPTURED") {
+                            writeToConsole(hostId, `[SEC-OPS-API] SUCCESS: IP ${blockTarget} added to alert database ledger.`, "text-stdout-success");
+                        } else {
+                            writeToConsole(hostId, `[SEC-OPS-API] ERROR: Database response invalid.`, "text-stdout-error");
+                        }
+                    })
+                    .catch(err => {
+                        writeToConsole(hostId, `[SEC-OPS-API] EXCEPTION: Tunnel transport failure.`, "text-stdout-error");
+                    });
+                    break;
+
+                case 'show':
+                    if (args.length === 0) {
+                        writeToConsole(hostId, "Error: Object name required. E.g. 'show run', 'show ip route'", "text-stdout-error");
+                        break;
+                    }
+                    const showTarget = args[0].toLowerCase();
+                    if (showTarget === 'run' || showTarget === 'running-config') {
+                        writeToConsole(hostId, `Building configuration for ${session.name}...`);
+                        writeToConsole(hostId, `Current configuration : 1856 bytes`);
+                        writeToConsole(hostId, `!`);
+                        writeToConsole(hostId, `version 15.2`);
+                        writeToConsole(hostId, `hostname ${session.name}`);
+                        writeToConsole(hostId, `!`);
+                        writeToConsole(hostId, `enable secret 9 $9$L228$Z.392mKO/L11S.`);
+                        writeToConsole(hostId, `service password-encryption`);
+                        writeToConsole(hostId, `!`);
+                        writeToConsole(hostId, `interface GigabitEthernet0/1`);
+                        writeToConsole(hostId, ` ip address ${session.ip} 255.255.255.0`);
+                        writeToConsole(hostId, ` duplex auto`);
+                        writeToConsole(hostId, ` speed auto`);
+                        writeToConsole(hostId, `!`);
+                        writeToConsole(hostId, `line vty 0 4`);
+                        writeToConsole(hostId, ` transport input ssh`);
+                        writeToConsole(hostId, `!`);
+                        writeToConsole(hostId, `end`);
+                    } else if (showTarget === 'ip' && args[1] && args[1].toLowerCase() === 'route') {
+                        if (session.type === 'router') {
+                            writeToConsole(hostId, "Codes: L - local, C - connected, S - static, R - RIP, M - mobile, B - BGP");
+                            writeToConsole(hostId, "       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area ");
+                            writeToConsole(hostId, "");
+                            writeToConsole(hostId, "Gateway of last resort is not set");
+                            writeToConsole(hostId, "");
+                            writeToConsole(hostId, "      10.0.0.0/24 is subnetted, 1 subnets");
+                            writeToConsole(hostId, "C        10.0.0.0 is directly connected, GigabitEthernet0/1");
+                            writeToConsole(hostId, "L        10.0.0.1 is directly connected, Loopback0");
+                            writeToConsole(hostId, "S        192.168.1.0/24 [1/0] via 192.168.1.254");
+                        } else {
+                            writeToConsole(hostId, "Error: Route query only supported on Router devices.", "text-stdout-error");
+                        }
+                    } else if (showTarget === 'mac-table' || showTarget === 'mac') {
+                        if (session.type === 'switch') {
+                            writeToConsole(hostId, "          MAC Address Table");
+                            writeToConsole(hostId, "-------------------------------------------");
+                            writeToConsole(hostId, "Vlan    Mac Address       Type        Ports");
+                            writeToConsole(hostId, "----    -----------       ----        -----");
+                            writeToConsole(hostId, "   1    0010.5a0d.20a1    DYNAMIC     Gi0/1");
+                            writeToConsole(hostId, "   1    0018.ba92.d022    DYNAMIC     Gi0/2");
+                            writeToConsole(hostId, "   1    00e0.291f.f102    DYNAMIC     Fast0/1");
+                        } else {
+                            writeToConsole(hostId, "Error: MAC database queries only supported on Switches.", "text-stdout-error");
+                        }
+                    } else if (showTarget === 'access-list' || showTarget === 'access-lists') {
+                        if (session.type === 'firewall') {
+                            writeToConsole(hostId, "Extended IP access list NET_INBOUND_FILTER");
+                            writeToConsole(hostId, "    10 permit tcp any any eq 443");
+                            writeToConsole(hostId, "    20 permit tcp any any eq 80");
+                            writeToConsole(hostId, "    30 permit tcp 10.0.0.0 0.255.255.255 any eq 22");
+                            writeToConsole(hostId, "    40 deny ip any any (8943 matches)");
+                        } else {
+                            writeToConsole(hostId, "Error: Security policy tables only available on Firewall hosts.", "text-stdout-error");
+                        }
+                    } else {
+                        writeToConsole(hostId, `Error: Object table "${showTarget}" not found on target host.`, "text-stdout-error");
+                    }
+                    break;
+
+                case 'systemctl':
+                    if (session.type !== 'server') {
+                        writeToConsole(hostId, "Error: systemctl command binary not found on node system path.", "text-stdout-error");
+                        break;
+                    }
+                    if (args.length < 2 || args[0].toLowerCase() !== 'status') {
+                        writeToConsole(hostId, "Usage: systemctl status <service_name>", "text-stdout-error");
+                        break;
+                    }
+                    const srvName = args[1].toLowerCase();
+                    writeToConsole(hostId, `&bull; ${srvName}.service - High-Performance Web Server daemon`);
+                    writeToConsole(hostId, `   Loaded: loaded (/lib/systemd/system/${srvName}.service; enabled)`);
+                    writeToConsole(hostId, `   Active: active (running) since Thu 2026-05-21 14:02:18 UTC; 12h ago`);
+                    writeToConsole(hostId, `   Main PID: 84312 (nginx)`);
+                    writeToConsole(hostId, `   Tasks: 4 (limit: 4915)`);
+                    writeToConsole(hostId, `   Memory: 24.1M`);
+                    writeToConsole(hostId, `   CGroup: /system.slice/${srvName}.service`);
+                    writeToConsole(hostId, `           &boxur;&box;84312 ${srvName}: master process`);
+                    break;
+
+                case 'docker':
+                    if (session.type !== 'server') {
+                        writeToConsole(hostId, "Error: docker daemon CLI binding not found on node.", "text-stdout-error");
+                        break;
+                    }
+                    if (args.length === 0 || args[0].toLowerCase() !== 'ps') {
+                        writeToConsole(hostId, "Usage: docker ps", "text-stdout-error");
+                        break;
+                    }
+                    writeToConsole(hostId, "CONTAINER ID   IMAGE          COMMAND                  CREATED         STATUS         PORTS                    NAMES");
+                    writeToConsole(hostId, "e283b9a110d2   redis:alpine   \"docker-entrypoint.s&hellip;\"   24 hours ago    Up 12 hours    0.0.0.0:6379->6379/tcp   cyberops-redis");
+                    writeToConsole(hostId, "f93d4a0a1f29   mysql:8.0      \"docker-entrypoint.s&hellip;\"   2 days ago      Up 12 hours    0.0.0.0:3306->3306/tcp   cyberops-mysql");
+                    break;
+
+                default:
+                    writeToConsole(hostId, `bash: command not found: ${baseCmd}. Type "help" to display operational tools.`, "text-stdout-error");
+                    break;
+            }
+        }, 150);
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,974 @@
+{% extends 'analyzer/base.html' %}
+
+{% block content %}
+<!-- Include Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    /* Premium CYBEROPS Palette & Typography */
+    .profile-container {
+        color: #e2e8f0;
+        font-family: 'Inter', sans-serif;
+    }
+
+    .soc-card {
+        background: linear-gradient(145deg, #070c14, #0b1320);
+        border: 1px solid #1a2a40;
+        border-radius: 12px;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+        transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+    .soc-card:hover {
+        border-color: rgba(0, 255, 153, 0.3);
+        box-shadow: 0 8px 32px 0 rgba(0, 255, 153, 0.05);
+    }
+
+    .section-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #1a2a40;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .section-header h5 {
+        font-size: 1.05rem;
+        font-weight: 700;
+        margin: 0;
+        color: #ffffff;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Profile Header */
+    .profile-header-wrap {
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        padding: 2.25rem;
+        flex-wrap: wrap;
+        position: relative;
+        overflow: hidden;
+    }
+    .profile-header-wrap::before {
+        content: '';
+        position: absolute;
+        top: 0; right: 0;
+        width: 150px; height: 150px;
+        background: radial-gradient(circle, rgba(0, 255, 153, 0.08) 0%, rgba(0,0,0,0) 70%);
+        pointer-events: none;
+    }
+
+    .avatar-large {
+        width: 100px;
+        height: 100px;
+        background: linear-gradient(135deg, #091e14, #020508);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 3px solid #00ff99;
+        box-shadow: 0 0 15px rgba(0, 255, 153, 0.25);
+        flex-shrink: 0;
+    }
+    .avatar-large span {
+        font-size: 3.2rem;
+        font-weight: 800;
+        color: #00ff99;
+        text-shadow: 0 0 8px rgba(0, 255, 153, 0.5);
+    }
+
+    .user-info-text h1 {
+        font-size: 2.2rem;
+        font-weight: 800;
+        color: #ffffff;
+        margin: 0 0 0.5rem 0;
+        letter-spacing: -0.5px;
+    }
+    .user-info-text p {
+        font-size: 0.9rem;
+        color: #94a3b8;
+        margin: 0 0 0.75rem 0;
+    }
+
+    .badge-cyber {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 0.4rem 0.85rem;
+        background: rgba(0, 255, 153, 0.06);
+        border: 1px solid rgba(0, 255, 153, 0.4);
+        border-radius: 6px;
+        font-size: 0.78rem;
+        font-weight: 600;
+        color: #00ff99;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    .badge-cyber-dark {
+        background: rgba(30, 41, 59, 0.5);
+        border-color: #334155;
+        color: #94a3b8;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1.25rem;
+        margin-bottom: 1.5rem;
+    }
+    .stat-card-premium {
+        background: linear-gradient(135deg, #090e16, #060a0f);
+        border: 1px solid #142132;
+        border-radius: 10px;
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        position: relative;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
+    }
+    .stat-card-premium::before {
+        content: '';
+        position: absolute;
+        bottom: 0; left: 0; width: 100%; height: 3px;
+        background: transparent;
+        transition: background 0.3s ease;
+    }
+    .stat-card-premium:hover {
+        transform: translateY(-4px);
+        border-color: #1a2a40;
+    }
+    .stat-card-premium.ip-scan:hover::before { background: #00ff99; }
+    .stat-card-premium.url-scan:hover::before { background: #38bdf8; }
+    .stat-card-premium.file-scan:hover::before { background: #a855f7; }
+    .stat-card-premium.blacklist-scan:hover::before { background: #ff3366; }
+
+    .stat-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        margin-bottom: 0.75rem;
+    }
+    .stat-icon-wrap {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+    .ip-scan .stat-icon-wrap { background: rgba(0, 255, 153, 0.08); color: #00ff99; }
+    .url-scan .stat-icon-wrap { background: rgba(56, 189, 248, 0.08); color: #38bdf8; }
+    .file-scan .stat-icon-wrap { background: rgba(168, 85, 247, 0.08); color: #a855f7; }
+    .blacklist-scan .stat-icon-wrap { background: rgba(255, 51, 102, 0.08); color: #ff3366; }
+
+    .stat-num-val {
+        font-size: 2.1rem;
+        font-weight: 800;
+        color: #ffffff;
+        line-height: 1;
+        margin-bottom: 0.25rem;
+        letter-spacing: -1px;
+    }
+    .stat-label-text {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Core Layout */
+    .profile-core-grid {
+        display: grid;
+        grid-template-columns: 1.2fr 0.8fr;
+        gap: 1.5rem;
+    }
+
+    /* API Credentials Card styling */
+    .api-key-container {
+        background: rgba(15, 23, 42, 0.4);
+        border: 1px solid #1e293b;
+        border-radius: 8px;
+        padding: 1.25rem;
+        margin: 1rem 0;
+    }
+    .api-key-input-group {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+    }
+    .masked-key-input {
+        background: #020617 !important;
+        border: 1px solid #334155 !important;
+        color: #00ff99 !important;
+        font-family: 'Consolas', monospace !important;
+        font-size: 1rem !important;
+        letter-spacing: 2px;
+        font-weight: 600;
+        padding: 0.6rem 1rem !important;
+        border-radius: 6px !important;
+        flex-grow: 1;
+        text-shadow: 0 0 4px rgba(0,255,153,0.3);
+    }
+    .action-btn-cyber {
+        background: #0f172a;
+        border: 1px solid #334155;
+        color: #e2e8f0;
+        border-radius: 6px;
+        padding: 0.6rem 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        transition: all 0.2s;
+    }
+    .action-btn-cyber:hover {
+        background: #1e293b;
+        border-color: #00ff99;
+        color: #00ff99;
+        box-shadow: 0 0 10px rgba(0,255,153,0.25);
+    }
+
+    /* Activity Feed styling */
+    .tabs-nav {
+        display: flex;
+        padding: 0 1rem;
+        border-bottom: 1px solid #1a2a40;
+        gap: 1.5rem;
+    }
+    .tab-btn {
+        background: none;
+        border: none;
+        padding: 1rem 0.5rem;
+        color: #94a3b8;
+        font-size: 0.85rem;
+        font-weight: 700;
+        cursor: pointer;
+        position: relative;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        transition: color 0.2s;
+    }
+    .tab-btn:hover {
+        color: #ffffff;
+    }
+    .tab-btn.active {
+        color: #00ff99;
+    }
+    .tab-btn.active::after {
+        content: '';
+        position: absolute;
+        bottom: -1px; left: 0; width: 100%; height: 2px;
+        background: #00ff99;
+        box-shadow: 0 0 8px rgba(0, 255, 153, 0.8);
+    }
+
+    .tab-content-panel {
+        padding: 1.5rem;
+    }
+
+    .activity-feed-list {
+        display: flex;
+        flex-direction: column;
+        gap: 0.85rem;
+    }
+    .activity-row {
+        background: #080d14;
+        border: 1px solid #132237;
+        border-radius: 8px;
+        padding: 1rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.2s;
+    }
+    .activity-row:hover {
+        border-color: #1d3554;
+        background: #0a111c;
+    }
+    .activity-title-sec {
+        font-weight: 600;
+        color: #ffffff;
+        font-size: 0.95rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .activity-desc-sec {
+        font-size: 0.8rem;
+        color: #94a3b8;
+        margin-top: 0.25rem;
+    }
+
+    .badge-risk {
+        padding: 0.25rem 0.65rem;
+        border-radius: 4px;
+        font-size: 0.72rem;
+        font-weight: 700;
+        text-transform: uppercase;
+    }
+    .badge-risk.high { background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.4); color: #ef4444; }
+    .badge-risk.medium { background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.4); color: #f59e0b; }
+    .badge-risk.low { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.4); color: #10b981; }
+
+    /* Account Status details */
+    .info-list {
+        display: flex;
+        flex-direction: column;
+    }
+    .info-item-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        border-bottom: 1px solid #1a2a40;
+    }
+    .info-item-row:last-child {
+        border-bottom: none;
+    }
+    .info-item-label {
+        font-size: 0.85rem;
+        color: #94a3b8;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .info-item-value {
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #ffffff;
+    }
+
+    /* Danger zone */
+    .danger-inner {
+        padding: 1.5rem;
+        text-align: center;
+    }
+    .btn-danger-cyber {
+        background: rgba(239, 68, 68, 0.05);
+        border: 1px solid rgba(239, 68, 68, 0.4);
+        color: #ef4444;
+        border-radius: 6px;
+        padding: 0.75rem 1.5rem;
+        font-weight: 700;
+        width: 100%;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+    .btn-danger-cyber:hover {
+        background: #ef4444;
+        color: #ffffff;
+        box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);
+    }
+
+    /* Modals styling */
+    .modal-content-cyber {
+        background: #090f19;
+        border: 1px solid #1e3a5f;
+        box-shadow: 0 0 25px rgba(0,0,0,0.8);
+        border-radius: 12px;
+    }
+    .modal-header-cyber {
+        border-bottom: 1px solid #1e3a5f;
+        padding: 1.25rem 1.5rem;
+    }
+    .modal-body-cyber {
+        padding: 1.5rem;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 1100px) {
+        .profile-core-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+    @media (max-width: 992px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+    @media (max-width: 576px) {
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+        .profile-header-wrap {
+            flex-direction: column;
+            text-align: center;
+            padding: 1.5rem;
+        }
+        .avatar-large {
+            margin: 0 auto;
+        }
+    }
+</style>
+
+<div class="container-fluid px-4 py-4 profile-container">
+    <!-- Profile Header Card -->
+    <div class="soc-card mb-4">
+        <div class="profile-header-wrap">
+            <div class="avatar-large">
+                <span>{{ user.username|make_list|first|upper }}</span>
+            </div>
+            <div class="user-info-text">
+                <h1>{{ user.username }}</h1>
+                <p>
+                    <i class="bi bi-envelope-fill text-muted me-1"></i> {{ user.email }}
+                    <span class="text-muted mx-2">|</span>
+                    <i class="bi bi-shield-fill-check text-muted me-1"></i> Member since {{ user.date_joined|date:"F j, Y" }}
+                </p>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="badge-cyber">
+                        <i class="bi {% if profile.user_type == 'company_admin' %}bi-building{% else %}bi-person-badge{% endif %}"></i>
+                        {{ profile.get_user_type_display }}
+                    </span>
+                    {% if profile.establishment %}
+                    <span class="badge-cyber badge-cyber-dark">
+                        <i class="bi bi-bank2"></i> {{ profile.establishment }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="ms-md-auto mt-3 mt-md-0">
+                <button type="button" class="action-btn-cyber" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                    <i class="bi bi-pencil-square"></i> Modify Account Settings
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats Metric Matrix -->
+    <div class="stats-grid">
+        <div class="stat-card-premium ip-scan">
+            <div class="stat-meta">
+                <span class="stat-label-text">IP Scans</span>
+                <div class="stat-icon-wrap"><i class="bi bi-hdd-network-fill"></i></div>
+            </div>
+            <div class="stat-num-val">{{ total_ip_scans }}</div>
+            <div class="text-muted" style="font-size: 0.72rem;">Network investigations completed</div>
+        </div>
+        <div class="stat-card-premium url-scan">
+            <div class="stat-meta">
+                <span class="stat-label-text">URL Scans</span>
+                <div class="stat-icon-wrap"><i class="bi bi-link-45deg"></i></div>
+            </div>
+            <div class="stat-num-val">{{ total_url_scans }}</div>
+            <div class="text-muted" style="font-size: 0.72rem;">Malicious links scrutinized</div>
+        </div>
+        <div class="stat-card-premium file-scan">
+            <div class="stat-meta">
+                <span class="stat-label-text">File Scans</span>
+                <div class="stat-icon-wrap"><i class="bi bi-file-binary-fill"></i></div>
+            </div>
+            <div class="stat-num-val">{{ total_file_scans }}</div>
+            <div class="text-muted" style="font-size: 0.72rem;">Binary checksums evaluated</div>
+        </div>
+        <div class="stat-card-premium blacklist-scan">
+            <div class="stat-meta">
+                <span class="stat-label-text">Blacklist</span>
+                <div class="stat-icon-wrap"><i class="bi bi-shield-x"></i></div>
+            </div>
+            <div class="stat-num-val">{{ total_blacklist_entries }}</div>
+            <div class="text-muted" style="font-size: 0.72rem;">Blocked attacker nodes</div>
+        </div>
+    </div>
+
+    <!-- Core Grid Area -->
+    <div class="profile-core-grid">
+        <!-- Left Side - API Credentials & Charts -->
+        <div class="d-flex flex-column gap-4">
+            <!-- API Credentials Card -->
+            <div class="soc-card">
+                <div class="section-header">
+                    <h5><i class="bi bi-key-fill text-success me-2"></i> API Access Credentials</h5>
+                </div>
+                <div class="p-4">
+                    <p class="text-muted mb-3" style="font-size: 0.85rem; line-height: 1.5;">
+                        Configure automated scripts to invoke CYBEROPS telemetry databases. 
+                        Your API key represents your direct operational authentication token. Keep this value confidential.
+                    </p>
+                    
+                    <div class="api-key-container">
+                        <label class="text-muted mb-2 d-block" style="font-size: 0.75rem; font-weight: 700; uppercase; letter-spacing: 0.5px;">CYBEROPS SECURITY TOKEN</label>
+                        <div class="api-key-input-group">
+                            <input type="password" id="apiTokenField" class="form-control masked-key-input" value="{{ profile.api_key }}" readonly>
+                            
+                            <button type="button" class="action-btn-cyber" id="toggleApiVisibilityBtn" onclick="toggleKeyVisibility()" title="Toggle visibility">
+                                <i class="bi bi-eye" id="toggleVisibilityIcon"></i>
+                            </button>
+                            
+                            <button type="button" class="action-btn-cyber" id="copyTokenBtn" onclick="copyTokenToClipboard()" title="Copy token">
+                                <i class="bi bi-clipboard" id="copyBtnIcon"></i> <span id="copyBtnText">Copy</span>
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted" style="font-size: 0.75rem;">
+                            <i class="bi bi-info-circle-fill text-info"></i> API requests processed this month: <strong>{{ profile.api_requests_count }}</strong>
+                        </span>
+                        
+                        <form method="post" onsubmit="return confirm('WARNING: Generating a new key will instantly invalidate your current credentials. Do you want to proceed?');">
+                            {% csrf_token %}
+                            <input type="hidden" name="regenerate_api" value="1">
+                            <button type="submit" class="action-btn-cyber text-warning" style="border-color: rgba(245,158,11,0.3);">
+                                <i class="bi bi-arrow-clockwise"></i> Regenerate API Key
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Analytical Charts -->
+            <div class="soc-card">
+                <div class="section-header">
+                    <h5><i class="bi bi-bar-chart-line-fill text-success me-2"></i> Operational Intelligence Analytics</h5>
+                </div>
+                <div class="p-4">
+                    <div class="row g-4">
+                        <div class="col-md-5 d-flex flex-column align-items-center justify-content-center">
+                            <h6 class="text-center text-light mb-3" style="font-size: 0.85rem; text-transform: uppercase;">Scan Distribution Index</h6>
+                            <div style="position: relative; height: 180px; width: 180px;">
+                                <canvas id="scanDistributionChart"></canvas>
+                            </div>
+                        </div>
+                        <div class="col-md-7">
+                            <h6 class="text-light mb-3" style="font-size: 0.85rem; text-transform: uppercase;">Scan Activity Summary (Metric Vol)</h6>
+                            <div style="position: relative; height: 180px; width: 100%;">
+                                <canvas id="scanVolumeChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Side - Account Details & Recent Feeds -->
+        <div class="d-flex flex-column gap-4">
+            <!-- Account Status Details -->
+            <div class="soc-card">
+                <div class="section-header">
+                    <h5><i class="bi bi-shield-check-fill text-success me-2"></i> Security Node Status</h5>
+                </div>
+                <div class="info-list">
+                    <div class="info-item-row">
+                        <span class="info-item-label"><i class="bi bi-clock-history"></i> Last Handshake:</span>
+                        <span class="info-item-value text-muted">{{ user.last_login|date:"Y-m-d H:i:s"|default:"Never" }}</span>
+                    </div>
+                    <div class="info-item-row">
+                        <span class="info-item-label"><i class="bi bi-pin-angle-fill"></i> Tunnel IP Address:</span>
+                        <span class="info-item-value text-muted">{{ profile.last_login_ip|default:"Unknown" }}</span>
+                    </div>
+                    <div class="info-item-row">
+                        <span class="info-item-label"><i class="bi bi-hourglass-split"></i> Session Duration:</span>
+                        <span class="info-item-value text-muted">{{ user.date_joined|timesince }}</span>
+                    </div>
+                    <div class="info-item-row">
+                        <span class="info-item-label"><i class="bi bi-envelope-check-fill"></i> Alerts Broadcasts:</span>
+                        <span class="info-item-value">
+                            {% if profile.email_notifications %}
+                                <span class="text-success"><i class="bi bi-circle-fill me-1" style="font-size: 8px;"></i> Broadcast Active</span>
+                            {% else %}
+                                <span class="text-danger"><i class="bi bi-circle-fill me-1" style="font-size: 8px;"></i> Silent Mode</span>
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Tabs Feed -->
+            <div class="soc-card">
+                <div class="section-header">
+                    <h5><i class="bi bi-cpu-fill text-success me-2"></i> Recent Event Ledger</h5>
+                </div>
+                
+                <div class="tabs-nav">
+                    <button class="tab-btn active" data-tab="ip">IP</button>
+                    <button class="tab-btn" data-tab="url">URL</button>
+                    <button class="tab-btn" data-tab="file">File</button>
+                </div>
+                
+                <!-- IP Ledger -->
+                <div class="tab-content-panel" id="tab-ip">
+                    {% if recent_ip_scans %}
+                        <div class="activity-feed-list">
+                            {% for scan in recent_ip_scans %}
+                            <div class="activity-row">
+                                <div>
+                                    <div class="activity-title-sec"><i class="bi bi-hdd-network-fill text-success"></i> {{ scan.ip }}</div>
+                                    <div class="activity-desc-sec">Scanned on {{ scan.created_at|date:"Y-m-d H:i" }}</div>
+                                </div>
+                                <div>
+                                    {% if scan.risk_score > 70 %}
+                                        <span class="badge-risk high">High ({{ scan.risk_score }}%)</span>
+                                    {% elif scan.risk_score > 30 %}
+                                        <span class="badge-risk medium">Med ({{ scan.risk_score }}%)</span>
+                                    {% else %}
+                                        <span class="badge-risk low">Low ({{ scan.risk_score }}%)</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4 text-muted" style="font-size: 0.85rem;">
+                            <i class="bi bi-shield-slash-fill d-block mb-2" style="font-size: 2rem;"></i> No IP scans recorded yet.
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- URL Ledger -->
+                <div class="tab-content-panel" id="tab-url" style="display: none;">
+                    {% if recent_url_scans %}
+                        <div class="activity-feed-list">
+                            {% for scan in recent_url_scans %}
+                            <div class="activity-row">
+                                <div>
+                                    <div class="activity-title-sec" title="{{ scan.url }}"><i class="bi bi-link-45deg text-success"></i> {{ scan.url|truncatechars:35 }}</div>
+                                    <div class="activity-desc-sec">Scanned on {{ scan.created_at|date:"Y-m-d H:i" }}</div>
+                                </div>
+                                <div>
+                                    {% if scan.status == 'DANGER' %}
+                                        <span class="badge-risk high">Danger</span>
+                                    {% elif scan.status == 'SUSPICIOUS' %}
+                                        <span class="badge-risk medium">Warn</span>
+                                    {% else %}
+                                        <span class="badge-risk low">Clean</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4 text-muted" style="font-size: 0.85rem;">
+                            <i class="bi bi-shield-slash-fill d-block mb-2" style="font-size: 2rem;"></i> No URL scans recorded yet.
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- File Ledger -->
+                <div class="tab-content-panel" id="tab-file" style="display: none;">
+                    {% if recent_file_scans %}
+                        <div class="activity-feed-list">
+                            {% for scan in recent_file_scans %}
+                            <div class="activity-row">
+                                <div>
+                                    <div class="activity-title-sec" title="{{ scan.file_name }}"><i class="bi bi-file-earmark-code-fill text-success"></i> {{ scan.file_name|truncatechars:35 }}</div>
+                                    <div class="activity-desc-sec">Size: {{ scan.file_size }} // {{ scan.created_at|date:"Y-m-d H:i" }}</div>
+                                </div>
+                                <div>
+                                    {% if scan.verdict == 'danger' %}
+                                        <span class="badge-risk high">Danger</span>
+                                    {% elif scan.verdict == 'suspicious' %}
+                                        <span class="badge-risk medium">Warn</span>
+                                    {% else %}
+                                        <span class="badge-risk low">Clean</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4 text-muted" style="font-size: 0.85rem;">
+                            <i class="bi bi-shield-slash-fill d-block mb-2" style="font-size: 2rem;"></i> No file scans recorded yet.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Danger Zone permanent actions -->
+            <div class="soc-card border-danger" style="border-color: rgba(239, 68, 68, 0.3) !important;">
+                <div class="section-header" style="border-bottom-color: rgba(239, 68, 68, 0.2);">
+                    <h5 class="text-danger"><i class="bi bi-exclamation-octagon-fill me-2"></i> Threat Zone</h5>
+                </div>
+                <div class="danger-inner">
+                    <button type="button" class="btn-danger-cyber" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                        <i class="bi bi-trash3-fill"></i> Decouple Account Node
+                    </button>
+                    <p class="text-muted mt-2 mb-0" style="font-size: 0.72rem;">
+                        Permanently destroys all database credentials, settings, and histories. This is irreversible.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modify Account Settings Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1" aria-labelledby="editProfileModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content modal-content-cyber">
+            <div class="modal-header modal-header-cyber">
+                <h5 class="modal-title text-success" id="editProfileModalLabel" style="margin: 0; font-weight: 700; text-transform: uppercase;"><i class="bi bi-pencil-square"></i> Modify Account Parameters</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body modal-body-cyber">
+                <form method="post" id="editProfileForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="update_profile" value="1">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted" style="font-size: 0.75rem; font-weight: 700;">USERNAME</label>
+                            {{ user_form.username }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted" style="font-size: 0.75rem; font-weight: 700;">EMAIL ADDRESS</label>
+                            {{ user_form.email }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted" style="font-size: 0.75rem; font-weight: 700;">FIRST NAME</label>
+                            {{ profile_form.first_name }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted" style="font-size: 0.75rem; font-weight: 700;">LAST NAME</label>
+                            {{ profile_form.last_name }}
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label text-muted" style="font-size: 0.75rem; font-weight: 700;">TELEPHONE TETHER</label>
+                            {{ profile_form.phone_number }}
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label text-muted" style="font-size: 0.75rem; font-weight: 700;">ORGANIZATION / COMPANY</label>
+                            {{ profile_form.establishment }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted" style="font-size: 0.75rem; font-weight: 700;">OPERATIONAL SECTOR</label>
+                            {{ profile_form.sector }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted" style="font-size: 0.75rem; font-weight: 700;">PRIMARY LANGUAGE</label>
+                            {{ profile_form.language }}
+                        </div>
+                        <div class="col-md-12 mt-4">
+                            <label class="d-flex align-items-center gap-2" style="cursor: pointer;">
+                                {{ profile_form.email_notifications }}
+                                <span class="text-light" style="font-size: 0.85rem;">Enable security alert email broadcasts</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="action-btn-cyber w-100 mt-4 text-center justify-content-center text-success" style="padding: 0.75rem; border-color: rgba(0, 255, 153, 0.4);">
+                        <i class="bi bi-save2-fill"></i> Save Modified Parameters
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Decouple Account Modal -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1" aria-labelledby="deleteAccountModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content modal-content-cyber border-danger" style="border-color: rgba(239, 68, 68, 0.4) !important;">
+            <div class="modal-header modal-header-cyber" style="border-bottom-color: rgba(239, 68, 68, 0.2);">
+                <h5 class="modal-title text-danger" id="deleteAccountModalLabel" style="margin: 0; font-weight: 700; text-transform: uppercase;"><i class="bi bi-exclamation-octagon-fill"></i> Node Decoupling Confirmation</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body modal-body-cyber text-center py-4">
+                <i class="bi bi-shield-fill-exclamation text-danger mb-3" style="font-size: 3.5rem; text-shadow: 0 0 10px rgba(239, 68, 68, 0.4);"></i>
+                <h5 class="text-light mb-2">Decouple and delete your user node?</h5>
+                <p class="text-muted mb-4" style="font-size: 0.85rem;">
+                    This will permanently drop your telemetry scan matrix, blacklist allocations, and account profile records. 
+                    This procedure cannot be undone.
+                </p>
+                <form method="post" id="deleteAccountForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="delete_account" value="1">
+                    <div class="d-flex gap-3 justify-content-center">
+                        <button type="submit" class="btn-danger-cyber" style="width: auto; padding-left: 2rem; padding-right: 2rem;">Confirm Node Drop</button>
+                        <button type="button" class="action-btn-cyber" data-bs-dismiss="modal" style="width: auto;">Abort Request</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Tab switching engine
+    document.addEventListener('DOMContentLoaded', function() {
+        const tabBtns = document.querySelectorAll('.tab-btn');
+        const tabContents = {
+            ip: document.getElementById('tab-ip'),
+            url: document.getElementById('tab-url'),
+            file: document.getElementById('tab-file')
+        };
+        
+        if (tabBtns.length > 0) {
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const tabId = this.getAttribute('data-tab');
+                    
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    if (tabContents.ip) tabContents.ip.style.display = 'none';
+                    if (tabContents.url) tabContents.url.style.display = 'none';
+                    if (tabContents.file) tabContents.file.style.display = 'none';
+                    
+                    if (tabContents[tabId]) {
+                        tabContents[tabId].style.display = 'block';
+                    }
+                });
+            });
+        }
+
+        // ================= CHART.JS IMPLEMENTATION =================
+        const ipCount = parseInt("{{ total_ip_scans|default:'0' }}") || 0;
+        const urlCount = parseInt("{{ total_url_scans|default:'0' }}") || 0;
+        const fileCount = parseInt("{{ total_file_scans|default:'0' }}") || 0;
+        const blacklistCount = parseInt("{{ total_blacklist_entries|default:'0' }}") || 0;
+
+        // Chart 1: Doughnut Distribution
+        const distCtx = document.getElementById('scanDistributionChart').getContext('2d');
+        new Chart(distCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['IP Scans', 'URL Scans', 'File Scans'],
+                datasets: [{
+                    data: [ipCount, urlCount, fileCount],
+                    backgroundColor: [
+                        'rgba(0, 255, 153, 0.85)',
+                        'rgba(56, 189, 248, 0.85)',
+                        'rgba(168, 85, 247, 0.85)'
+                    ],
+                    borderColor: '#0b1320',
+                    borderWidth: 2,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let sum = context.dataset.data.reduce((a, b) => a + b, 0);
+                                let value = context.raw;
+                                let percentage = sum > 0 ? ((value / sum) * 100).toFixed(0) + "%" : "0%";
+                                return " " + context.label + ": " + value + " (" + percentage + ")";
+                            }
+                        }
+                    }
+                },
+                cutout: '72%'
+            }
+        });
+
+        // Chart 2: Bar Summary
+        const volCtx = document.getElementById('scanVolumeChart').getContext('2d');
+        new Chart(volCtx, {
+            type: 'bar',
+            data: {
+                labels: ['IP Scans', 'URL Scans', 'File Scans', 'Blacklist'],
+                datasets: [{
+                    label: 'Scan count',
+                    data: [ipCount, urlCount, fileCount, blacklistCount],
+                    backgroundColor: [
+                        'rgba(0, 255, 153, 0.7)',
+                        'rgba(56, 189, 248, 0.7)',
+                        'rgba(168, 85, 247, 0.7)',
+                        'rgba(255, 51, 102, 0.7)'
+                    ],
+                    borderColor: [
+                        '#00ff99',
+                        '#38bdf8',
+                        '#a855f7',
+                        '#ff3366'
+                    ],
+                    borderWidth: 1.5,
+                    borderRadius: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        grid: {
+                            color: '#1a2a40'
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 9 },
+                            stepSize: 1
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            color: '#94a3b8',
+                            font: { size: 10 }
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    });
+
+    // ================= API CREDENTIALS ACTIONS =================
+    function toggleKeyVisibility() {
+        const input = document.getElementById('apiTokenField');
+        const icon = document.getElementById('toggleVisibilityIcon');
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.classList.remove('bi-eye');
+            icon.classList.add('bi-eye-slash');
+        } else {
+            input.type = 'password';
+            icon.classList.remove('bi-eye-slash');
+            icon.classList.add('bi-eye');
+        }
+    }
+
+    function copyTokenToClipboard() {
+        const tokenInput = document.getElementById('apiTokenField');
+        const originalType = tokenInput.type;
+        
+        // Temporarily change type to copy correctly if needed in some older browsers
+        tokenInput.type = 'text';
+        tokenInput.select();
+        tokenInput.setSelectionRange(0, 99999);
+        
+        navigator.clipboard.writeText(tokenInput.value).then(() => {
+            // Restore type
+            tokenInput.type = originalType;
+            
+            // Visual success feedback
+            const copyBtnText = document.getElementById('copyBtnText');
+            const copyBtnIcon = document.getElementById('copyBtnIcon');
+            
+            copyBtnText.textContent = 'Copied!';
+            copyBtnIcon.className = 'bi bi-check-lg text-success';
+            
+            setTimeout(() => {
+                copyBtnText.textContent = 'Copy';
+                copyBtnIcon.className = 'bi bi-clipboard';
+            }, 2000);
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            tokenInput.type = originalType;
+        });
+    }
+</script>
+
+<!-- Make sure Bootstrap JS is loaded -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+{% endblock %}

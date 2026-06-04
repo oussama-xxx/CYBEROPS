@@ -1,0 +1,374 @@
+{% extends 'analyzer/base.html' %}
+{% block content %}
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+
+<div class="container-fluid font-monospace text-light px-4 py-3 soc-dashboard-wrapper">
+    
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="soc-card p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div>
+                    <h5 class="theme-glow-text mb-1 fw-bold"><i class="bi bi-shield-shaded me-2"></i>CYBEROPS PLATFORM // IP INTEL ANALYZER</h5>
+                    <p class="soc-label-muted small mb-0">SYS_STATUS: <span class="text-theme-success fw-bold">● RUNNING [LIVE FEED]</span></p>
+                </div>
+                
+                <form method="POST" class="m-0 flex-grow-1 flex-md-grow-0" style="min-width: 350px;">
+                    {% csrf_token %}
+                    <div class="input-group border-theme rounded bg-black p-1">
+                        <span class="input-group-text bg-transparent border-0 text-theme-success fw-bold">> SYSTEM@IP:~#</span>
+                        <input type="text" name="ip" class="form-control bg-transparent text-white border-0 soc-field font-monospace" placeholder="[target_ipv4_address]" required autocomplete="off">
+                        <button class="btn btn-theme-success text-black fw-bold px-4 rounded" type="submit">INTERROGATE</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if result %}
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="soc-banner-card p-4 position-relative overflow-hidden">
+                <div class="row align-items-center">
+                    <div class="col-md-5 text-center text-md-start">
+                        <span class="badge border border-theme-success text-theme-success mb-2 tracking-widest px-2 py-1" style="font-size: 0.7rem; background: rgba(0, 255, 153, 0.05);">[TARGET_IDENTIFIED]</span>
+                        <div class="display-4 text-white fw-bold tracking-wider ip-display-glow">{{ result.ip }}</div>
+                    </div>
+                    <div class="col-md-7 border-start-md border-theme-dark-soft ps-md-4 mt-3 mt-md-0">
+                        <div class="row g-3 text-start">
+                            <div class="col-sm-6">
+                                <div class="soc-label-muted small">// PROVIDER / CARRIER:</div>
+                                <div class="text-white fw-bold text-truncate">{{ result.provider|default:"N/A" }}</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="soc-label-muted small">// ASN_ORBIT:</div>
+                                <div class="text-white fw-bold text-truncate">{{ result.organization|default:"N/A" }}</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="soc-label-muted small">// GEOLOCATION:</div>
+                                <div class="text-theme-success fw-bold"><i class="bi bi-geo-alt-fill me-1"></i>📍 {{ result.city|default:"Unknown" }}, {{ result.country|default:"Unknown" }}</div>
+                            </div>
+                            <div class="col-sm-6">
+                                <div class="soc-label-muted small">// COORDINATES:</div>
+                                <div class="text-white fw-bold">{{ result.latitude|default:"33.5731" }}, {{ result.longitude|default:"-7.5898" }}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-7 col-12">
+            <div class="soc-card p-3 h-100">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3 d-flex justify-content-between align-items-center">
+                    <span class="text-theme-success fw-bold"><i class="bi bi-map-fill me-2"></i>GEOSPATIAL TOPOLOGY MAP (EXACT)</span>
+                    <span class="badge bg-black border border-theme-success text-theme-success small px-2">LIVE MONITOR</span>
+                </div>
+                <div id="soc-live-map" class="rounded border border-theme-dark-soft" style="height: 350px; background: #0b0f14;"></div>
+            </div>
+        </div>
+
+        <div class="col-lg-5 col-12">
+            <div class="soc-card p-3 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="border-bottom border-theme-dark-soft pb-2 mb-3 d-flex justify-content-between align-items-center">
+                        <span class="text-theme-success fw-bold"><i class="bi bi-cpu-fill me-2"></i>SHODAN_INFRA_INTEL</span>
+                        <span class="soc-label-muted small">[SCAN_LOG]</span>
+                    </div>
+                    
+                    <div class="small lh-lg">
+                        <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-2">
+                            <span class="soc-label-muted">> INFRA_HARDWARE_OS:</span>
+                            <span class="text-white fw-bold">{{ result.os|default:"Fingerprint Missing" }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-2">
+                            <span class="soc-label-muted">> HOSTNAME_PTR:</span>
+                            <span class="text-white fw-bold text-truncate ms-2" style="max-width: 200px;">{{ result.hostname|default:"No PTR Record Mapped" }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-2">
+                            <span class="soc-label-muted">> TOTAL_ACTIVE_NODES:</span>
+                            <span class="text-theme-success fw-bold border border-theme-success px-2 rounded" style="background: rgba(0, 255, 153, 0.05);">{{ result.open_ports.split|length|default:"0" }} Active Ports</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    <div class="soc-label-muted small mb-2 fw-bold text-uppercase tracking-wider"><i class="bi bi-ethernet me-1"></i>> OPEN_PORTS_PORTAL (GRID_FLOW):</div>
+                    <div class="d-flex flex-wrap gap-2 console-scroll-soc" style="max-height: 140px; overflow-y: auto; padding-right: 2px;">
+                        {% if result.open_ports and result.open_ports != "None Detected" %}
+                            {% for port in result.open_ports.split %}
+                                <div class="soc-port-badge border border-theme-dark-soft rounded p-2 text-center flex-grow-1" style="min-width: 75px;">
+                                    <div class="small soc-label-muted" style="font-size: 0.58rem; font-weight: bold;">PORT</div>
+                                    <div class="text-white fw-bold" style="font-size: 0.95rem;">{{ port|cut:"," }}</div>
+                                </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="w-100 soc-label-muted small p-2 border border-theme-dark-soft text-center bg-black">No active open entry-points verified.</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-md-4 col-12">
+            <div class="soc-card p-3 h-100 d-flex flex-column justify-content-center text-center">
+                <div class="soc-label-muted small text-uppercase tracking-wider mb-2 fw-bold">// AGGREGATED THREAT RISK STATE</div>
+                
+                <div class="risk-hud-circle my-3 mx-auto d-flex align-items-center justify-content-center 
+                    {% if result.risk_score > 60 %}border-danger-theme text-theme-danger
+                    {% elif result.risk_score > 20 %}border-warning-theme text-theme-warning
+                    {% else %}border-success-theme text-theme-success{% endif %}">
+                    <span class="display-4 fw-bold" style="font-family: sans-serif;">{{ result.risk_score }}%</span>
+                </div>
+
+                <div class="mt-1">
+                    <span class="badge text-uppercase tracking-widest fw-bold w-100 border p-2 rounded
+                        {% if result.risk_score > 60 %}bg-danger-soft-theme text-theme-danger border-danger-theme
+                        {% elif result.risk_score > 20 %}bg-warning-soft-theme text-theme-warning border-warning-theme
+                        {% else %}bg-success-soft-theme text-theme-success border-success-theme{% endif %}">
+                        STATUS // {{ result.status }}
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8 col-12">
+            <div class="soc-card p-3 h-100">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3">
+                    <span class="text-theme-success fw-bold"><i class="bi bi-clipboard-data-fill me-2"></i>THREAT_REPUTATION_MATRIX // LEDGER_CHECK</span>
+                </div>
+                
+                <div class="row g-2 small">
+                    <div class="col-sm-6 border-bottom border-theme-dark-soft pb-2">
+                        <span class="soc-label-muted d-block">>> AbuseIPDB Index Status:</span>
+                        <span class="fw-bold {% if result.risk_score > 40 %}text-theme-danger{% else %}text-theme-success{% endif %}">{{ result.blacklist_status }}</span>
+                    </div>
+                    <div class="col-sm-6 border-bottom border-theme-dark-soft pb-2">
+                        <span class="soc-label-muted d-block">>> Abuse Reported Incidents:</span>
+                        <span class="text-white fw-bold">{{ result.abuse_reports }} reports checked</span>
+                    </div>
+                    <div class="col-sm-6 border-bottom border-theme-dark-soft pt-1 pb-2">
+                        <span class="soc-label-muted d-block">>> VirusTotal Engines Feed:</span>
+                        <span class="fw-bold {% if result.vt_positives > 0 %}text-theme-danger{% else %}text-theme-success{% endif %}">
+                            {{ result.vt_positives }} / {{ result.vt_total }} DETECTIONS
+                        </span>
+                    </div>
+                    <div class="col-sm-6 border-bottom border-theme-dark-soft pt-1 pb-2">
+                        <span class="soc-label-muted d-block">>> Network Domain Registry:</span>
+                        <span class="text-white fw-bold">{{ result.organization|default:"N/A" }}</span>
+                    </div>
+                </div>
+                
+                <div class="mt-3">
+                    <div class="p-2 rounded bg-black border border-theme-dark-soft soc-text-info" style="font-size: 0.75rem; line-height: 1.4;">
+                        <i class="bi bi-info-circle text-theme-success me-1"></i> Security classification index aggregates direct peripheral tracking parameters from distributed API endpoints hooks natively matching threat behaviors logs.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="soc-card p-3">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3 d-flex justify-content-between align-items-center">
+                    <span class="text-theme-success fw-bold"><i class="bi bi-incognito me-2"></i>KNOWN_EXPLOIT_SIGNATURES // DEEP_CVE_VULNERABILITY_LOGS</span>
+                    <span class="badge border text-theme-danger border-danger-theme bg-danger-soft-theme small px-2">VULN_FEED_READER</span>
+                </div>
+
+                <div class="console-scroll-soc p-2 bg-black rounded border border-theme-dark-soft mb-3" style="max-height: 250px; overflow-y: auto;">
+                    {% if result.vulns and result.vulns != "None Detected" %}
+                        <div class="row g-2">
+                            {% for cve in result.vulns.split %}
+                            <div class="col-md-6 col-12">
+                                <div class="p-3 rounded border border-danger-theme bg-danger-card d-flex align-items-start gap-3">
+                                    <span class="badge bg-theme-danger text-black font-weight-bold px-2 py-1" style="font-size: 0.72rem;">CRIT</span>
+                                    <div class="w-100">
+                                        <div class="fw-bold text-white tracking-wide" style="font-size: 0.88rem;"><i class="bi bi-patch-exclamation-fill text-theme-danger me-1"></i>{{ cve|cut:"," }}</div>
+                                        <div class="soc-label-muted mt-1" style="font-size: 0.75rem; line-height: 1.4;">Active system exploit vector flagged during passive infrastructure probing loop. Immediate tracking and remediation patching required.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="text-theme-success p-3 small text-center fw-bold">
+                            <i class="bi bi-check-circle-fill me-2"></i>[OK] Zero critical CVE exploit signatures mapped within active scanning infrastructure layer.
+                        </div>
+                    {% endif %}
+                </div>
+
+                
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+
+<style>
+    html, body {
+        background-color: #0b0f14 !important;
+        color: #e2e8f0 !important; /* Byed jdid s7i7 m3a l-3in */
+        overflow-y: auto !important;
+        height: auto !important;
+    }
+    
+    .soc-dashboard-wrapper {
+        background: radial-gradient(circle at top right, rgba(16, 27, 22, 0.3), rgba(11, 15, 20, 1)) !important;
+    }
+
+    /* Alwan jdid l label li kanet gris mtfiya */
+    .soc-label-muted {
+        color: #8fa0b0 !important; /* Steel cyan clarifier kayban clear bezzaf fl dark background */
+    }
+
+    .soc-text-info {
+        color: #a3b8cc !important; /* Gris clair-bleuté l description info boxes */
+    }
+
+    .text-theme-success { color: #00ff99 !important; }
+    .text-theme-warning { color: #ff9900 !important; }
+    .text-theme-danger { color: #ff3333 !important; }
+    
+    .theme-glow-text {
+        color: #00ff99 !important;
+        text-shadow: 0 0 12px rgba(0, 255, 153, 0.3);
+    }
+
+    .btn-theme-success {
+        background-color: #00ff99 !important;
+        border-color: #00ff99 !important;
+        color: #000000 !important;
+    }
+    .btn-theme-success:hover {
+        background-color: #00e676 !important;
+        box-shadow: 0 0 15px rgba(0, 255, 153, 0.5);
+    }
+
+    .btn-outline-theme-success {
+        color: #00ff99 !important;
+        border-color: #30363d !important;
+        background: #121820;
+    }
+    .btn-outline-theme-success:hover {
+        background-color: #00ff99 !important;
+        color: #000000 !important;
+        border-color: #00ff99 !important;
+    }
+
+    .soc-card {
+        background-color: #121820 !important;
+        border: 1px solid #212c3a !important;
+        border-radius: 6px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+
+    .soc-banner-card {
+        background: linear-gradient(135deg, #18222f 0%, #0d141c 100%) !important;
+        border: 1px solid #2d3d52 !important;
+        border-radius: 6px !important;
+    }
+
+    .border-theme { border: 1px solid #00ff99 !important; }
+    .soc-field { color: #ffffff !important; }
+
+    .ip-display-glow {
+        color: #ffffff !important;
+        text-shadow: 0 0 20px rgba(0, 255, 153, 0.25);
+    }
+
+    .soc-port-badge {
+        background-color: #0b0f14 !important;
+    }
+    .soc-port-badge:hover {
+        border-color: #00ff99 !important;
+        background-color: rgba(0, 255, 153, 0.04) !important;
+    }
+
+    .risk-hud-circle {
+        width: 125px;
+        height: 125px;
+        border-radius: 50%;
+        border: 6px solid #212c3a;
+        background-color: #0b0f14;
+    }
+    .border-success-theme { border-color: rgba(0, 255, 153, 0.4) !important; box-shadow: 0 0 15px rgba(0, 255, 153, 0.1); }
+    .border-warning-theme { border-color: rgba(255, 153, 0, 0.4) !important; box-shadow: 0 0 15px rgba(255, 153, 0, 0.1); }
+    .border-danger-theme { border-color: rgba(255, 51, 51, 0.4) !important; box-shadow: 0 0 15px rgba(255, 51, 51, 0.1); }
+
+    .bg-success-soft-theme { background-color: rgba(0, 255, 153, 0.08) !important; }
+    .bg-warning-soft-theme { background-color: rgba(255, 153, 0, 0.08) !important; }
+    .bg-danger-soft-theme { background-color: rgba(255, 51, 51, 0.08) !important; }
+    .bg-danger-card { background-color: rgba(255, 51, 51, 0.02) !important; }
+    .bg-theme-danger { background-color: #ff3333 !important; }
+    .border-theme-dark-soft { border-color: #212c3a !important; }
+
+    @media (min-width: 768px) {
+        .border-start-md { border-left: 1px solid #212c3a !important; }
+    }
+
+    .console-scroll-soc::-webkit-scrollbar { width: 6px; height: 6px; }
+    .console-scroll-soc::-webkit-scrollbar-track { background: #0b0f14; }
+    .console-scroll-soc::-webkit-scrollbar-thumb { background: #212c3a; border-radius: 3px; }
+    .console-scroll-soc::-webkit-scrollbar-thumb:hover { background: #00ff99; }
+</style>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const mapContainer = document.getElementById('soc-live-map');
+        if (mapContainer) {
+            const lat = parseFloat("{{ result.latitude }}") || 33.5731;
+            const lon = parseFloat("{{ result.longitude }}") || -7.5898;
+            const targetIp = "{{ result.ip }}";
+            const targetCity = "{{ result.city|default:'Unknown' }}";
+
+            const map = L.map('soc-live-map', {
+                center: [lat, lon],
+                zoom: 12,
+                zoomControl: true,
+                attributionControl: false
+            });
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 20
+            }).addTo(map);
+
+            const trackingIcon = L.divIcon({
+                className: 'custom-tracker-pin',
+                html: `<div style="position: relative;">
+                         <div style="width: 14px; height: 14px; background-color: #00ff99; border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 10px #00ff99;"></div>
+                         <div style="position: absolute; top: -3px; left: -3px; width: 20px; height: 20px; border: 2px solid #00ff99; border-radius: 50%; animation: pulsePin 1.5s infinite; opacity: 0.6;"></div>
+                       </div>`,
+                iconSize: [20, 20],
+                iconAnchor: [10, 10]
+            });
+
+            const socMarker = L.marker([lat, lon], { icon: trackingIcon }).addTo(map);
+            
+            socMarker.bindPopup(`
+                <div style="font-family: monospace; color: #0b0f14; font-size: 11px; line-height: 1.4;">
+                    <strong style="color: #00e676; font-weight: bold;">● TARGET INSTANCE MATCHED</strong><br>
+                    <b>IP_NODE:</b> ${targetIp}<br>
+                    <b>CITY_LOC:</b> ${targetCity}
+                </div>
+            `).openPopup();
+            
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 400);
+        }
+    });
+</script>
+
+<style>
+    @keyframes pulsePin {
+        0% { transform: scale(0.6); opacity: 0.9; }
+        100% { transform: scale(1.6); opacity: 0; }
+    }
+</style>
+{% endblock %}

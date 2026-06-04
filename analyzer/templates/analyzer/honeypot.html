@@ -1,0 +1,244 @@
+{% extends 'analyzer/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-2">
+    
+    <!-- ===================================================================== -->
+    <!-- HEADER HUD SECTION -->
+    <!-- ===================================================================== -->
+    <div class="soc-glass-panel mb-4 p-3 border-theme-dark-soft position-relative overflow-hidden" id="honeypotHudHeader">
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center position-relative" style="z-index: 2;">
+            <div>
+                <h1 class="text-theme-success mb-0 tracking-widest fw-black fs-4 text-warning">
+                    <i class="bi bi-shield-fill-exclamation"></i> NETWATCH // DECOY_HONEYPOT
+                </h1>
+                <p class="text-muted mb-0 small mt-1">
+                    Passive Intrusion Capture Node // Trapping Probes and Port Scan Vectors
+                </p>
+            </div>
+            <div class="font-monospace text-end d-none d-md-block text-warning small">
+                HONEYPOT SHIELD: <span class="badge bg-warning-opacity text-warning animate-pulse">ARMED & MONITORING</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- ACTIVE LISTENERS STATS -->
+    <!-- ===================================================================== -->
+    <div class="row g-3 mb-4">
+        {% for listener in listeners %}
+        <div class="col-md-3">
+            <div class="soc-glass-panel p-3 border-theme-dark-soft" style="background: rgba(15, 23, 36, 0.45);">
+                <div class="d-flex align-items-center justify-content-between">
+                    <div>
+                        <div class="font-monospace text-muted small">PORT: {{ listener.port }}</div>
+                        <div class="font-monospace text-light fw-bold mt-1" style="font-size: 0.9rem;">{{ listener.service }}</div>
+                    </div>
+                    <span class="badge bg-success-opacity text-theme-success" style="font-size: 0.75rem;">{{ listener.status }}</span>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-theme-dark-soft">
+                    <span class="font-monospace text-muted small" style="font-size: 0.7rem;">PROBE HITS:</span>
+                    <span class="font-monospace text-warning fw-bold small" id="hits-{{ listener.port }}">{{ listener.hits }}</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- MAIN COLUMN LAYOUT -->
+    <!-- ===================================================================== -->
+    <div class="row g-4">
+        
+        <!-- Left Column: Attack Simulations & Webhook triggers -->
+        <div class="col-lg-5">
+            
+            <!-- Honeypot webhook endpoint card -->
+            <div class="soc-glass-panel p-4 mb-4 border-theme-dark-soft" style="background: rgba(8, 12, 18, 0.9);">
+                <h4 class="text-theme-success mb-3 font-monospace" style="font-size: 1rem;">
+                    <i class="bi bi-link-45deg"></i> PUBLIC HONEYPOT WEBHOOK
+                </h4>
+                <p class="text-muted small font-monospace">
+                    Exposing a decoy endpoint on the public interface. Any probe (port scan, automated script, crawler) hitting this URL gets logged and auto-blacklisted.
+                </p>
+                
+                <div class="bg-black-opacity p-3 border border-theme-dark-soft rounded font-monospace my-3 position-relative">
+                    <div class="text-muted small mb-1">// COPYABLE WEBHOOK PROBE COMMAND:</div>
+                    <code class="text-warning text-break" id="curlCommandCode" style="font-size: 0.8rem;">curl "http://{{ request.get_host }}/honeypot/probe/?ip=185.220.101.44&reason=External+Probe"</code>
+                    <button class="btn btn-outline-warning btn-xs position-absolute top-2 end-2" onclick="copyWebhookCommand()">
+                        <i class="bi bi-clipboard"></i> COPY
+                    </button>
+                </div>
+                
+                <div class="small text-muted font-monospace mt-2">
+                    <i class="bi bi-info-circle-fill"></i> Triggering this route inserts the source IP directly into the blacklist DB.
+                </div>
+            </div>
+
+            <!-- Decoy Trigger Simulator -->
+            <div class="soc-glass-panel p-4 border-theme-dark-soft" style="background: rgba(8, 12, 18, 0.95);">
+                <h4 class="text-warning mb-3 font-monospace" style="font-size: 1rem;">
+                    <i class="bi bi-lightning-fill"></i> DETONATION SIMULATOR
+                </h4>
+                <p class="text-muted small font-monospace">
+                    Manually trigger a simulated probe scan to evaluate IDS correlation and blacklist routing.
+                </p>
+
+                <div class="d-flex flex-column gap-3 mt-4">
+                    <button class="btn btn-outline-warning btn-sm font-monospace text-start p-3 transition-all" onclick="detonateSimulatedAttack('185.220.101.44', 'Tor Exit Node Probe')">
+                        <i class="bi bi-radioactive me-2"></i> DETONATE: IP 185.220.101.44 // Tor Exit Node Probe
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm font-monospace text-start p-3 transition-all" onclick="detonateSimulatedAttack('193.188.22.10', 'SSH Brute-Force Bot')">
+                        <i class="bi bi-terminal-fill me-2"></i> DETONATE: IP 193.188.22.10 // SSH Brute-Force Bot
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm font-monospace text-start p-3 transition-all" onclick="detonateSimulatedAttack('45.143.203.18', 'HTTP Admin Scan')">
+                        <i class="bi bi-globe me-2"></i> DETONATE: IP 45.143.203.18 // HTTP Admin Scan
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+
+        <!-- Right Column: Blacklisted IP Captures Ledger -->
+        <div class="col-lg-7">
+            <div class="soc-glass-panel p-4 h-100 border-theme-dark-soft" style="background: rgba(5, 8, 12, 0.98);">
+                <div class="d-flex align-items-center justify-content-between border-bottom border-theme-dark-soft pb-2 mb-3">
+                    <h4 class="text-theme-success mb-0 font-monospace" style="font-size: 1.05rem;">
+                        <i class="bi bi-shield-slash"></i> CAPTURE BLACKLISTED LEDGER
+                    </h4>
+                    <span class="badge bg-warning-opacity text-warning font-monospace" style="font-size: 0.75rem;" id="ledgerCountBadge">
+                        {{ honeypot_blacklisted.count }} CAPTURED IPS
+                    </span>
+                </div>
+
+                <!-- Ledger Table -->
+                <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
+                    <table class="table table-dark table-hover border-theme-dark-soft font-monospace" style="font-size: 0.8rem;">
+                        <thead>
+                            <tr class="text-muted">
+                                <th>TARGET IP</th>
+                                <th>CAPTURE REASON</th>
+                                <th>TIMESTAMP</th>
+                                <th class="text-end">ACTION</th>
+                            </tr>
+                        </thead>
+                        <tbody id="captureLedgerBody">
+                            {% for item in honeypot_blacklisted %}
+                            <tr id="blacklist-row-{{ item.id }}">
+                                <td class="text-danger fw-bold"><i class="bi bi-lock-fill"></i> {{ item.ip_address }}</td>
+                                <td class="text-warning">{{ item.reason }}</td>
+                                <td class="text-muted">{{ item.added_at|date:"Y-m-d H:i:s" }}</td>
+                                <td class="text-end">
+                                    <button class="btn btn-outline-danger btn-xs py-0 px-2" onclick="releaseBlacklistIp('{{ item.id }}', '{{ item.ip_address }}')">
+                                        RELEASE
+                                    </button>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr id="emptyLedgerRow">
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    <i class="bi bi-check-circle text-success me-2"></i> Decoy clear. No intrusion attempts captured by honeypot nodes.
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- Detonation & Ledger Operations Javascript -->
+<script>
+    function copyWebhookCommand() {
+        const text = document.getElementById('curlCommandCode').innerText;
+        navigator.clipboard.writeText(text).then(() => {
+            alert('Webhook command copied to clipboard!');
+        }).catch(err => {
+            alert('Failed to copy command: ' + err);
+        });
+    }
+
+    function detonateSimulatedAttack(ipAddress, reason) {
+        // Increment hits counter in listening nodes
+        const ports = [22, 80, 3306, 8080];
+        const randomPort = ports[Math.floor(Math.random() * ports.length)];
+        const hitsNode = document.getElementById(`hits-${randomPort}`);
+        if (hitsNode) {
+            hitsNode.textContent = parseInt(hitsNode.textContent) + 1;
+        }
+
+        // Call the webhook probe to blacklist the IP
+        fetch(`/honeypot/probe/?ip=${ipAddress}&reason=Honeypot+Simulator:+${encodeURIComponent(reason)}`)
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === "CAPTURED") {
+                // If it is newly added, update the UI ledger
+                if (data.newly_added) {
+                    // Remove empty message if any
+                    const emptyRow = document.getElementById('emptyLedgerRow');
+                    if (emptyRow) {
+                        emptyRow.remove();
+                    }
+
+                    // Prepend new row
+                    const tbody = document.getElementById('captureLedgerBody');
+                    const rowHtml = `
+                        <tr id="blacklist-row-${data.ip_id}">
+                            <td class="text-danger fw-bold"><i class="bi bi-lock-fill"></i> ${ipAddress}</td>
+                            <td class="text-warning">${data.reason}</td>
+                            <td class="text-muted">${data.timestamp}</td>
+                            <td class="text-end">
+                                <button class="btn btn-outline-danger btn-xs py-0 px-2 me-2" onclick="releaseBlacklistIp('${data.ip_id}', '${ipAddress}')">
+                                    RELEASE
+                                </button>
+                                <span class="badge bg-warning text-black">NEWLY BANNED</span>
+                            </td>
+                        </tr>
+                    `;
+                    tbody.insertAdjacentHTML('afterbegin', rowHtml);
+                    
+                    // Increment badge count
+                    const badge = document.getElementById('ledgerCountBadge');
+                    const count = parseInt(badge.textContent) + 1;
+                    badge.textContent = `${count} CAPTURED IPS`;
+                } else {
+                    alert(`IP ${ipAddress} was already captured and blacklisted.`);
+                }
+            }
+        })
+        .catch(err => {
+            alert('Failed to execute simulation probe.');
+        });
+    }
+
+    function releaseBlacklistIp(id, ip) {
+        if (confirm(`Are you sure you want to release IP ${ip} from the blacklist database?`)) {
+            fetch(`/honeypot/release/?id=${id}`)
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === "RELEASED") {
+                    const row = document.getElementById(`blacklist-row-${id}`);
+                    if (row) {
+                        row.remove();
+                        // Decrement count
+                        const badge = document.getElementById('ledgerCountBadge');
+                        const count = Math.max(0, parseInt(badge.textContent) - 1);
+                        badge.textContent = `${count} CAPTURED IPS`;
+                    }
+                    alert(`IP ${ip} released from active firewall session.`);
+                } else {
+                    alert(`Error releasing IP: ${data.error || 'Unknown response'}`);
+                }
+            })
+            .catch(err => {
+                alert('Exception: Network or authentication error occurred.');
+            });
+        }
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends 'analyzer/base.html' %}
+{% block content %}
+
+<div class="container-fluid font-monospace text-light px-4 py-3 soc-dashboard-wrapper">
+    
+    <div class="row g-3 mb-3">
+        <div class="col-lg-8 col-12">
+            <div class="soc-card p-3 h-100">
+                <h5 class="theme-glow-text mb-1 fw-bold"><i class="bi bi-shield-slash me-2"></i>CYBEROPS PLATFORM // HYBRID BLACKLIST LEDGER</h5>
+                <p class="soc-label-muted small mb-3">SYS_STATUS: <span class="text-theme-success fw-bold">● FIREWALL_SYNC_ACTIVE</span></p>
+                
+                <form method="POST" class="m-0">
+                    {% csrf_token %}
+                    <input type="hidden" name="query_ledger" value="1">
+                    
+                    <div class="input-group border-theme p-1" style="background-color: #000000;">
+                        <span class="input-group-text bg-transparent border-0 text-theme-success fw-bold">> IP_TARGET://</span>
+                        <input type="text" name="target" class="form-control bg-transparent text-white border-0 soc-field font-monospace" placeholder="[target_ipv4_address]" required>
+                        <button class="btn btn-theme-success text-black fw-bold px-4" type="submit">CHECK_BLACKLISTS</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-12">
+            <div class="soc-card p-3 h-100">
+                <span class="text-theme-danger small fw-bold d-block mb-2">// INJECT MANUAL LOCAL BLOCK</span>
+                <form method="POST" class="m-0">
+                    {% csrf_token %}
+                    <input type="hidden" name="add_local" value="1">
+                    <input type="text" name="ip_address" class="form-control form-control-sm bg-black border border-theme-dark-soft text-white mb-2 rounded-0 font-monospace" placeholder="IP Address" required>
+                    <input type="text" name="reason" class="form-control form-control-sm bg-black border border-theme-dark-soft text-white mb-2 rounded-0 font-monospace" placeholder="Reason for ban">
+                    <button type="submit" class="btn btn-sm btn-outline-danger w-100 rounded-0 fw-bold">COMMIT_LOCAL_BLOCK</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if result %}
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="soc-banner-card p-4 position-relative overflow-hidden {% if result.verdict == 'danger' %}border-danger-theme bg-danger-soft-theme danger-border-left{% else %}border-success-theme bg-success-soft-theme success-border-left{% endif %}">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <span class="badge mb-2 tracking-widest px-2 py-1 rounded-0 {% if result.verdict == 'danger' %}badge-danger-theme{% else %}badge-success-theme{% endif %}">
+                            [{{ result.source|default:'OSINT_API' }}]
+                        </span>
+                        <div class="display-6 text-white fw-bold tracking-wider raw-url-glow">{{ result.target }}</div>
+                        <p class="mb-0 text-white small mt-2">> <span class="soc-label-muted">Verdict:</span> {{ result.reason|default:'Analyse terminée' }}</p>
+                    </div>
+                    <div class="col-md-4 text-center text-md-end mt-3 mt-md-0">
+                        <div class="d-inline-block text-center px-4 py-2 bg-black border border-theme-dark-soft">
+                            <div class="soc-label-muted small mb-1">// CONFIDENCE_INDEX:</div>
+                            <h2 class="fw-bold m-0 {% if result.verdict == 'danger' %}text-theme-danger{% else %}text-theme-success{% endif %}">
+                                {{ result.risk_score|default:'0' }}% {{ result.verdict|upper }}
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="col-12">
+            <div class="soc-card p-3">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3">
+                    <span class="text-theme-danger fw-bold"><i class="bi bi-hdd-network me-2"></i>INTERNAL FIREWALL DATABASE (LOCAL LAB LEDGER)</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-dark table-hover font-monospace m-0 small border border-theme-dark-soft">
+                        <thead>
+                            <tr class="bg-black text-theme-success border-bottom border-theme-dark-soft">
+                                <th scope="col"># TARGET IP</th>
+                                <th scope="col">REASON</th>
+                                <th scope="col">TIMESTAMP</th>
+                                <th scope="col">STATUS</th>
+                                <th scope="col" style="width: 120px;">ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for record in local_ledger %}
+                            <tr class="align-middle border-bottom border-theme-dark-soft">
+                                <td class="text-white fw-bold">{{ record.ip_address }}</td>
+                                <td class="text-warning">{{ record.reason }}</td>
+                                <td class="soc-label-muted">{{ record.added_at|date:"Y-m-d H:i:s" }}</td>
+                                <td><span class="badge bg-danger text-black fw-bold rounded-0">HARD_BLOCKED</span></td>
+                                <td>
+                                    <button class="btn btn-sm btn-outline-theme-success rounded-0 p-1 me-1" onclick="openEditModal('{{ record.id }}', '{{ record.ip_address }}', '{{ record.reason|escapejs }}')" title="Edit Reason" style="font-size: 0.85rem; line-height: 1;">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </button>
+                                    <form method="POST" action="{% url 'analyzer:blacklist_delete' record.id %}" style="display:inline;" onsubmit="return confirm('Are you sure you want to release {{ record.ip_address }} from the blacklist?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-sm btn-outline-danger rounded-0 p-1" title="Delete Block" style="font-size: 0.85rem; line-height: 1;">
+                                            <i class="bi bi-trash-fill"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">// Aucune IP en liste noire locale.</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Reason Modal -->
+<div class="modal fade font-monospace text-light" id="editReasonModal" tabindex="-1" aria-labelledby="editReasonModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content bg-black border border-theme" style="border-radius: 0px;">
+            <div class="modal-header border-bottom border-theme-dark-soft">
+                <h5 class="modal-title text-theme-success fw-bold" id="editReasonModalLabel">// MODIFY_BLOCK_REASON</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="editReasonForm" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="editIpAddress" class="form-label text-white">> IP_TARGET:</label>
+                        <input type="text" class="form-control bg-transparent text-muted border-0 font-monospace p-0" id="editIpAddress" readonly style="box-shadow: none;">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editReasonInput" class="form-label text-theme-success">> REASON:</label>
+                        <input type="text" name="reason" class="form-control bg-black border border-theme-dark-soft text-white rounded-0 font-monospace" id="editReasonInput" required>
+                    </div>
+                </div>
+                <div class="modal-footer border-top border-theme-dark-soft">
+                    <button type="button" class="btn btn-outline-secondary rounded-0 btn-sm" data-bs-dismiss="modal">CANCEL</button>
+                    <button type="submit" class="btn btn-theme-success btn-sm text-black fw-bold">COMMIT_CHANGES</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    function openEditModal(id, ip, reason) {
+        document.getElementById('editIpAddress').value = ip;
+        document.getElementById('editReasonInput').value = reason;
+        document.getElementById('editReasonForm').action = "/blacklist/edit/" + id + "/";
+        const editModal = new bootstrap.Modal(document.getElementById('editReasonModal'));
+        editModal.show();
+    }
+</script>
+
+<style>
+    /* Tes styles restent inchangés ici */
+    .soc-dashboard-wrapper { background: radial-gradient(circle at top right, rgba(0, 255, 153, 0.03), rgba(4, 7, 10, 1)) !important; }
+    .soc-label-muted { color: #8fa0b0 !important; }
+    .text-theme-success { color: #00ff99 !important; }
+    .text-theme-danger { color: #ff3366 !important; }
+    .theme-glow-text { color: #00ff99 !important; text-shadow: 0 0 12px rgba(0, 255, 153, 0.35); }
+    .btn-theme-success { background-color: #00ff99 !important; border-color: #00ff99 !important; color: #000000 !important; border-radius: 0px !important; }
+    .soc-card { background-color: #090e15 !important; border: 2px solid #1a293d !important; border-radius: 0px !important; }
+    .soc-banner-card { border-radius: 0px !important; border: 2px solid #1a293d !important; }
+    .border-theme { border: 2px solid #00ff99 !important; }
+</style>
+{% endblock %}

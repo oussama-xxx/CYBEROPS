@@ -1,0 +1,219 @@
+{% extends 'analyzer/base.html' %}
+
+{% block content %}
+<div class="container-fluid font-monospace text-light px-4 py-3 h-100 d-flex flex-column" style="max-height: calc(100vh - 120px);">
+    
+    <div class="row g-3 mb-3 flex-shrink-0">
+        <div class="col-12">
+            <div class="soc-card p-3 d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="theme-glow-text mb-1 fw-bold">
+                        <i class="bi bi-cpu-fill me-2"></i>CYBEROPS PLATFORM // COGNITIVE CORE CHATBOT
+                    </h5>
+                    <p class="soc-label-muted small mb-0">INTELLIGENCE_NODE: <span class="text-theme-success fw-bold">● ONLINE [SECURE_SHELL]</span></p>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge border border-theme-success text-theme-success px-2 py-1" style="background: rgba(0, 255, 153, 0.05);">MODEL: GEMINI-2.5-FLASH</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 flex-grow-1 overflow-hidden mb-3">
+        <div class="col-12 h-100 d-flex flex-column">
+            <div class="soc-card p-0 d-flex flex-column flex-grow-1 overflow-hidden" style="border-radius: 6px;">
+                <!-- Chat log area -->
+                <div class="chat-terminal-body p-4 flex-grow-1 overflow-y-auto" id="pageChatBody" style="background: linear-gradient(180deg, #05090e 0%, #020407 100%); display: flex; flex-direction: column; gap: 15px;">
+                    <div class="chat-terminal-msg msg-sys p-3">
+                        <div class="msg-header text-theme-success mb-1">[SYSTEM INITIALIZATION SUCCESSFULLY COMPLETED]</div>
+                        <div class="msg-content">Welcome to the CYBEROPS Cyber-Intelligence AI Core. I am powered by Gemini. You can query me for threat analysis, security recommendations, and network diagnostics. Execute your query below.</div>
+                    </div>
+                </div>
+                
+                <!-- Chat footer input -->
+                <div class="chat-terminal-footer p-3 border-top border-theme-dark-soft" style="background-color: #090e15;">
+                    <div class="input-group border-theme rounded bg-black p-1">
+                        <span class="input-group-text bg-transparent border-0 text-theme-success fw-bold">> SYSTEM@AI-CORE:~#</span>
+                        <input type="text" id="pageChatInput" class="form-control bg-transparent text-white border-0 soc-field font-monospace" placeholder="[enter_query_or_instruction_here]" autocomplete="off" onkeypress="handlePageChatKeyPress(event)">
+                        <button class="btn btn-theme-success text-black fw-bold px-4 rounded" onclick="transmitPageChatMessage()">TRANSMIT</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    /* Styling adjustments to match other pages */
+    html, body {
+        background-color: #0b0f14 !important;
+        color: #e2e8f0 !important;
+        overflow-y: hidden !important;
+    }
+    
+    .chat-terminal-body::-webkit-scrollbar {
+        width: 6px;
+    }
+    .chat-terminal-body::-webkit-scrollbar-track {
+        background: #0b0f14;
+    }
+    .chat-terminal-body::-webkit-scrollbar-thumb {
+        background: #212c3a;
+        border-radius: 3px;
+    }
+    .chat-terminal-body::-webkit-scrollbar-thumb:hover {
+        background: #00ff99;
+    }
+
+    .chat-terminal-msg {
+        max-width: 85%;
+        border-radius: 4px;
+        font-size: 0.95rem;
+        line-height: 1.6;
+        word-wrap: break-word;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+    }
+    
+    .msg-sys {
+        background: rgba(26, 41, 61, 0.4);
+        border-left: 4px solid var(--soc-neon-green);
+        align-self: flex-start;
+    }
+    
+    .msg-usr {
+        background: rgba(0, 255, 153, 0.07);
+        border-right: 4px solid var(--soc-neon-green);
+        align-self: flex-end;
+        color: var(--soc-neon-green);
+    }
+    
+    .theme-glow-text {
+        color: #00ff99 !important;
+        text-shadow: 0 0 12px rgba(0, 255, 153, 0.3);
+    }
+    
+    .btn-theme-success {
+        background-color: #00ff99 !important;
+        border-color: #00ff99 !important;
+        color: #000000 !important;
+    }
+    .btn-theme-success:hover {
+        background-color: #00e676 !important;
+        box-shadow: 0 0 15px rgba(0, 255, 153, 0.5);
+    }
+    
+    .soc-card {
+        background-color: #121820 !important;
+        border: 1px solid #212c3a !important;
+        border-radius: 6px !important;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    }
+    
+    .border-theme {
+        border: 1px solid #00ff99 !important;
+    }
+    
+    .border-theme-dark-soft {
+        border-color: #212c3a !important;
+    }
+    
+    .soc-field {
+        color: #ffffff !important;
+    }
+    
+    .soc-label-muted {
+        color: #8fa0b0 !important;
+    }
+</style>
+
+<script>
+    function handlePageChatKeyPress(event) {
+        if (event.key === 'Enter') {
+            transmitPageChatMessage();
+        }
+    }
+
+    function transmitPageChatMessage() {
+        const inputField = document.getElementById('pageChatInput');
+        const chatBody = document.getElementById('pageChatBody');
+        const message = inputField.value.trim();
+        
+        if (!message) return;
+        
+        // Render user message instantly
+        chatBody.innerHTML += `
+            <div class="chat-terminal-msg msg-usr p-3">
+                <div class="msg-header text-theme-success mb-1">[USER@QUERY]</div>
+                <div class="msg-content">${escapePageHtml(message)}</div>
+            </div>
+        `;
+        
+        inputField.value = '';
+        chatBody.scrollTop = chatBody.scrollHeight;
+        
+        // Render systems thinking indicator
+        const indicatorId = 'typing_' + Date.now();
+        chatBody.innerHTML += `
+            <div class="chat-terminal-msg msg-sys p-3" id="${indicatorId}">
+                <div class="msg-header text-theme-success mb-1">[AI CORE THINKING...]</div>
+                <div class="msg-content"><span class="animate-pulse">Analyzing vector signals...</span></div>
+            </div>
+        `;
+        chatBody.scrollTop = chatBody.scrollHeight;
+        
+        // Dispatch request to chatbot API endpoint
+        fetch('{% url "analyzer:chatbot_api" %}', {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: JSON.stringify({ message: message })
+        })
+        .then(res => res.json())
+        .then(data => {
+            // Remove typing indicator
+            const indicator = document.getElementById(indicatorId);
+            if (indicator) {
+                indicator.remove();
+            }
+            
+            if (data.response) {
+                chatBody.innerHTML += `
+                    <div class="chat-terminal-msg msg-sys p-3">
+                        <div class="msg-header text-theme-success mb-1">[AI RESPONSE]</div>
+                        <div class="msg-content">${escapePageHtml(data.response)}</div>
+                    </div>
+                `;
+            } else {
+                chatBody.innerHTML += `
+                    <div class="chat-terminal-msg msg-sys p-3" style="border-color: var(--soc-neon-danger);">
+                        <div class="msg-header text-danger mb-1">[API ERROR]</div>
+                        <div class="msg-content">Signal interception failure. Trace logs.</div>
+                    </div>
+                `;
+            }
+            chatBody.scrollTop = chatBody.scrollHeight;
+        })
+        .catch(err => {
+            const indicator = document.getElementById(indicatorId);
+            if (indicator) {
+                indicator.remove();
+            }
+            chatBody.innerHTML += `
+                <div class="chat-terminal-msg msg-sys p-3" style="border-color: var(--soc-neon-danger);">
+                    <div class="msg-header text-danger mb-1">[CONNECTION ERROR]</div>
+                    <div class="msg-content">Node isolation detected. Connection lost.</div>
+                </div>
+            `;
+            chatBody.scrollTop = chatBody.scrollHeight;
+        });
+    }
+
+    function escapePageHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML.replace(/\n/g, '<br>');
+    }
+</script>
+{% endblock %}

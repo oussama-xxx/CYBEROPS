@@ -1,0 +1,992 @@
+{% extends 'analyzer/base.html' %}
+{% block content %}
+
+<!-- Custom Premium CSS & Typography -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+<div class="container-fluid px-4 py-3 deep-forensic-soc">
+
+    <!-- CRT Screen Overlay Effect -->
+    <div class="crt-overlay"></div>
+
+    <!-- ===================== TOP GLOWING HEADER ===================== -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="soc-terminal-card p-4 position-relative overflow-hidden header-soc-card">
+                <div class="d-flex flex-column flex-xxl-row justify-content-between align-items-xxl-center gap-3">
+                    <div>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="pulse-indicator-neon"></span>
+                            <h4 class="orbitron-heading fw-black mb-0 tracking-widest text-uppercase">
+                                <i class="bi bi-radioactive text-theme-success me-2"></i>CYBEROPS // FORENSIC OPERATION CENTER
+                            </h4>
+                        </div>
+                        <p class="share-tech-text small mb-0 text-muted-soc">
+                            MODULE_ID: <span class="text-theme-success">DF_DECODER_V4.2</span> 
+                            &nbsp;&bull;&nbsp; CORE_LATENCY: <span class="text-white">0.003s</span>
+                            &nbsp;&bull;&nbsp; HEURISTICS: <span class="text-theme-success">ENABLED</span>
+                        </p>
+                    </div>
+
+                    <!-- Cyber Upload Box -->
+                    <form method="POST" enctype="multipart/form-data" class="m-0 flex-grow-1 flex-xxl-grow-0" style="max-width: 580px;" id="forensicUploadForm">
+                        {% csrf_token %}
+                        <div class="input-group cyber-upload-border p-1" style="background-color: #020508;">
+                            <span class="input-group-text share-tech-text bg-transparent border-0 text-theme-success fw-bold px-3">
+                                <i class="bi bi-terminal me-2"></i>INJECT://
+                            </span>
+                            <input type="file" name="forensic_file" class="form-control bg-transparent text-white border-0 share-tech-text text-truncate py-2" required accept=".log,.txt,.pcap,.pcapng,.evtx" id="forensicFileInput">
+                            <button class="btn btn-cyber-success fw-bold orbitron-heading px-4 py-2" type="submit" id="forensicSubmitBtn">
+                                <i class="bi bi-shield-fill-check me-1"></i> DEEP_SCAN()
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Live Scanner Telemetry Progress Bar -->
+                <div class="forensic-progress-bar mt-3" id="forensicProgressBar" style="display: none;">
+                    <div class="forensic-progress-fill"></div>
+                    <div class="d-flex justify-content-between share-tech-text mt-1 text-theme-success" style="font-size: 0.75rem;">
+                        <span>SCANNING PACKET STRUCTURES...</span>
+                        <span id="scanPercent">0%</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if not result %}
+    <!-- ===================== EMPTY STATE / CYBER RADAR ===================== -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="soc-terminal-card p-5 text-center position-relative overflow-hidden radar-container">
+                <div class="radar-sweep"></div>
+                <div class="empty-state-icon mb-4">
+                    <i class="bi bi-shield-slash pulse-critical-icon" style="font-size: 6rem; color: rgba(0, 255, 153, 0.15); filter: drop-shadow(0 0 20px rgba(0, 255, 153, 0.1));"></i>
+                </div>
+                <h3 class="orbitron-heading fw-bold mb-3 text-white">AWAITING SYSTEM FORENSIC INJECTION</h3>
+                <p class="share-tech-text mb-4 text-muted-soc" style="max-width: 680px; margin: 0 auto; font-size: 1rem; line-height: 1.6;">
+                    Connect a payload source to perform binary pattern matching and byte-level protocol analytics. 
+                    Supports raw network data captures, local endpoint event sequences, and application diagnostic log arrays.
+                </p>
+                
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <div class="radar-tag"><i class="bi bi-flag-fill text-warning me-1"></i> CTF SIGNATURES</div>
+                    <div class="radar-tag"><i class="bi bi-bug-fill text-theme-danger me-1"></i> EXPLOIT ANALYSIS</div>
+                    <div class="radar-tag"><i class="bi bi-cpu-fill text-info me-1"></i> PCAP DISSECTION</div>
+                    <div class="radar-tag"><i class="bi bi-key-fill text-theme-success me-1"></i> CREDENTIAL LEAKS</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if result %}
+    <!-- ===================== LIVE VERDICT HEADER BANNER ===================== -->
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="verdict-banner p-4 position-relative overflow-hidden
+                {% if result.verdict == 'danger' %}banner-danger-soc border-left-danger
+                {% elif result.verdict == 'suspicious' %}banner-warning-soc border-left-warning
+                {% else %}banner-success-soc border-left-success{% endif %}">
+                
+                <div class="glow-bg-accent"></div>
+                
+                <div class="row align-items-center">
+                    <!-- Left info metadata -->
+                    <div class="col-xl-8 text-center text-xl-start">
+                        <span class="badge mb-2 tracking-widest orbitron-heading px-3 py-1 rounded-0 border
+                            {% if result.verdict == 'danger' %}text-theme-danger border-danger-theme bg-danger-transparent
+                            {% elif result.verdict == 'suspicious' %}text-theme-warning border-warning-theme bg-warning-transparent
+                            {% else %}text-theme-success border-success-theme bg-success-transparent{% endif %}" style="font-size: 0.75rem;">
+                            <i class="bi bi-{% if result.verdict == 'danger' %}exclamation-diamond-fill{% elif result.verdict == 'suspicious' %}exclamation-triangle-fill{% else %}check-circle-fill{% endif %} me-1"></i>
+                            SYSTEM_VERDICT // {{ result.verdict|upper }}
+                        </span>
+                        
+                        <div class="orbitron-heading display-6 text-white fw-black tracking-wider text-truncate" style="letter-spacing: 2px;">
+                            {{ result.file_name }}
+                        </div>
+                        
+                        <div class="d-flex flex-wrap justify-content-center justify-content-xl-start gap-3 mt-2 share-tech-text text-muted-soc small">
+                            <span><i class="bi bi-hdd-fill text-theme-success me-1"></i>SIZE: {{ result.file_size }}</span>
+                            <span><i class="bi bi-file-earmark-code-fill text-theme-success me-1"></i>CLASS: {{ result.file_type }}</span>
+                            <span><i class="bi bi-braces text-theme-success me-1"></i>ENGINE: {{ result.analysis_type|upper }}</span>
+                        </div>
+                    </div>
+
+                    <!-- Right Circular Threat Gauge -->
+                    <div class="col-xl-4 text-center text-xl-end mt-4 mt-xl-0">
+                        <div class="d-inline-flex align-items-center gap-3 bg-black-soft border border-soc px-4 py-3 rounded-1 position-relative">
+                            <div class="text-start share-tech-text">
+                                <div class="text-muted-soc text-uppercase small">// INTEGRATED_THREAT:</div>
+                                <h1 class="orbitron-heading fw-black m-0 {% if result.verdict == 'danger' %}text-theme-danger{% elif result.verdict == 'suspicious' %}text-theme-warning{% else %}text-theme-success{% endif %}">
+                                    {{ result.risk_score }}%
+                                </h1>
+                            </div>
+                            
+                            <!-- Premium SVG Threat Radial Arc -->
+                            <div class="radial-gauge-container">
+                                <svg width="70" height="70" viewBox="0 0 36 36" class="circular-chart">
+                                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    <path class="circle {% if result.verdict == 'danger' %}stroke-theme-danger{% elif result.verdict == 'suspicious' %}stroke-theme-warning{% else %}stroke-theme-success{% endif %}" 
+                                        stroke-dasharray="{{ result.risk_score }}, 100" 
+                                        d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                </svg>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SHA-256 SIGNATURE FOOTER -->
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="soc-terminal-card p-3 font-monospace">
+                <div class="d-flex flex-column flex-md-row align-items-md-center gap-2 share-tech-text small">
+                    <span class="text-muted-soc fw-bold text-uppercase"><i class="bi bi-fingerprint me-1"></i> PAYLOAD HASH:</span>
+                    <span class="text-warning text-break fw-bold" style="letter-spacing: 1px;">{{ result.sha256 }}</span>
+                    <button class="btn btn-sm border-soc-soft text-theme-success ms-md-auto py-1 px-3 mt-2 mt-md-0" onclick="navigator.clipboard.writeText('{{ result.sha256 }}');this.innerHTML='<i class=\'bi bi-check-lg\'></i> HASH COPIED';" style="background: rgba(0, 255, 153, 0.05);">
+                        <i class="bi bi-clipboard-pulse me-1"></i> COPY_HASH
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== HACKER CTF FLAGS PANEL ===================== -->
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="soc-terminal-card p-3 {% if result.ctf_flags %}ctf-glow-card{% endif %}">
+                <div class="border-bottom border-soc-soft pb-2 mb-3 d-flex justify-content-between align-items-center">
+                    <span class="orbitron-heading fw-bold" style="color: #ffcc00; text-shadow: 0 0 8px rgba(255, 204, 0, 0.3);">
+                        <i class="bi bi-flag-fill me-2"></i>CAPTURED CTF FLAGS (DECRYPTED)
+                    </span>
+                    <span class="badge bg-black border rounded-0 share-tech-text {% if result.ctf_flags %}border-warning text-warning{% else %}border-soc-soft text-muted{% endif %}" style="font-size: 0.75rem;">
+                        {{ result.ctf_flags|length }} OBJECTIVE(S) CAPTURED
+                    </span>
+                </div>
+
+                {% if result.ctf_flags %}
+                <div class="row g-2">
+                    {% for flag in result.ctf_flags %}
+                    <div class="col-md-6 col-12">
+                        <div class="ctf-flag-cyberbox p-3 d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="trophy-glow-icon">
+                                    <i class="bi bi-trophy-fill" style="color: #ffcc00;"></i>
+                                </div>
+                                <div>
+                                    <div class="small text-muted share-tech-text text-uppercase">// CAPTURED_FLAG:</div>
+                                    <code class="ctf-flag-value share-tech-text">{{ flag }}</code>
+                                </div>
+                            </div>
+                            <button class="btn btn-sm btn-cyber-amber px-3 py-2 share-tech-text" onclick="navigator.clipboard.writeText('{{ flag }}');this.innerHTML='<i class=\'bi bi-check-lg\'></i>';setTimeout(()=>this.innerHTML='<i class=\'bi bi-clipboard\'></i>',1500);">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-4 text-muted-soc share-tech-text">
+                    <i class="bi bi-search-heart" style="font-size: 2rem; color: rgba(255,255,255,0.08);"></i>
+                    <p class="mb-0 mt-2">No CTF flag structures identified in data segments.</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== INTERACTIVE SOC NAVIGATION TABS ===================== -->
+    <div class="row g-3 mb-4">
+        <div class="col-12">
+            <div class="soc-tab-container d-flex gap-2 border-bottom border-soc-soft pb-2 overflow-x-auto">
+                <button class="soc-tab-btn active orbitron-heading" data-target="#tab-overview">
+                    <i class="bi bi-grid-1x2-fill me-1"></i> OVERVIEW
+                </button>
+                <button class="soc-tab-btn orbitron-heading" data-target="#tab-alerts">
+                    <i class="bi bi-shield-fill-exclamation me-1"></i> THREATS ({{ result.security_alerts|length }})
+                </button>
+                <button class="soc-tab-btn orbitron-heading" data-target="#tab-timeline">
+                    <i class="bi bi-clock-history me-1"></i> EVENT TIMELINE
+                </button>
+                {% if result.analysis_type == 'pcap' or result.analysis_type == 'pcapng' %}
+                <button class="soc-tab-btn orbitron-heading" data-target="#tab-network">
+                    <i class="bi bi-diagram-3-fill me-1"></i> NETWORK METRICS
+                </button>
+                {% endif %}
+                <button class="soc-tab-btn orbitron-heading" data-target="#tab-console">
+                    <i class="bi bi-terminal-fill me-1"></i> SCAN CONSOLE LOGS
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== TAB 1: OVERVIEW ===================== -->
+    <div class="soc-tab-content active" id="tab-overview">
+        <!-- AI Advisor & Threat Stats -->
+        <div class="row g-3 mb-3">
+            <div class="col-lg-6 col-12">
+                <div class="soc-terminal-card p-4 h-100 position-relative overflow-hidden">
+                    <div class="border-bottom border-soc-soft pb-2 mb-3">
+                        <span class="orbitron-heading text-theme-success fw-bold">
+                            <i class="bi bi-lightbulb-fill me-2"></i>CYBEROPS AI SOC RECOMMENDATIONS
+                        </span>
+                    </div>
+                    <div class="share-tech-text bg-black-soft p-3 border border-soc-soft position-relative">
+                        <div class="cyber-scanlines"></div>
+                        <span class="text-theme-success fw-bold">> ADVISORY SYSTEM DETECTED THE FOLLOWING PROCEDURES:</span>
+                        <p class="text-white mt-2 small lh-lg" style="letter-spacing: 0.5px;">
+                            {{ result.mitigation }}
+                        </p>
+                        <div class="mt-3 text-muted-soc small border-top border-soc-soft pt-2">
+                            * AI Mitigations generated based on observed payload characteristics. Implement in local firewalls.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Threat Count Summary Nodes -->
+            <div class="col-lg-6 col-12">
+                <div class="row g-3 h-100">
+                    <div class="col-6">
+                        <div class="metric-block p-4 text-center border-left-danger h-100">
+                            <i class="bi bi-bug text-theme-danger mb-2" style="font-size: 2.2rem; display: block;"></i>
+                            <div class="small text-muted share-tech-text text-uppercase">// EXPL_CRITICAL_HITS:</div>
+                            <h2 class="orbitron-heading fw-black text-theme-danger mt-1 mb-0">{{ result.malicious_count }}</h2>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="metric-block p-4 text-center border-left-warning h-100">
+                            <i class="bi bi-exclamation-triangle text-theme-warning mb-2" style="font-size: 2.2rem; display: block;"></i>
+                            <div class="small text-muted share-tech-text text-uppercase">// SUSP_WARN_HITS:</div>
+                            <h2 class="orbitron-heading fw-black text-theme-warning mt-1 mb-0">{{ result.suspicious_count }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Secondary Details Grid -->
+        <div class="row g-3">
+            <!-- Metrics detail left -->
+            <div class="col-lg-4 col-md-6 col-12">
+                <div class="soc-terminal-card p-3 h-100">
+                    <div class="border-bottom border-soc-soft pb-2 mb-3">
+                        <span class="share-tech-text text-theme-success fw-bold"><i class="bi bi-cpu me-2"></i>ENGINE SUMMARY METRICS</span>
+                    </div>
+                    <div class="share-tech-text small">
+                        {% if result.analysis_type == 'pcap' or result.analysis_type == 'pcapng' %}
+                        <div class="d-flex justify-content-between border-bottom border-soc-soft py-2">
+                            <span class="text-muted-soc">> PACKET_COUNT:</span>
+                            <span class="text-white fw-bold">{{ result.metrics.total_packets }} pkts</span>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom border-soc-soft py-2">
+                            <span class="text-muted-soc">> CAPTURED_BYTES:</span>
+                            <span class="text-white fw-bold">{{ result.metrics.total_data_bytes }} bytes</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-2">
+                            <span class="text-muted-soc">> RISK_VERDICT:</span>
+                            <span class="text-theme-danger fw-bold">HIGH RISK ALERT</span>
+                        </div>
+                        {% elif result.analysis_type == 'evtx' %}
+                        <div class="d-flex justify-content-between border-bottom border-soc-soft py-2">
+                            <span class="text-muted-soc">> ENDPOINT_NODE:</span>
+                            <span class="text-white fw-bold">{{ result.metrics.computer_name }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom border-soc-soft py-2">
+                            <span class="text-muted-soc">> TOTAL_EVENTS:</span>
+                            <span class="text-white fw-bold">{{ result.metrics.total_events }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-2">
+                            <span class="text-muted-soc">> MALICIOUS_LOGS:</span>
+                            <span class="text-theme-danger fw-bold">{{ result.metrics.malicious_count }}</span>
+                        </div>
+                        {% else %}
+                        <div class="d-flex justify-content-between border-bottom border-soc-soft py-2">
+                            <span class="text-muted-soc">> PARSED_LINES:</span>
+                            <span class="text-white fw-bold">{{ result.metrics.total_lines }} lines</span>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom border-soc-soft py-2">
+                            <span class="text-muted-soc">> ATTACKS_DETECTED:</span>
+                            <span class="text-theme-danger fw-bold">{{ result.metrics.malicious_count }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between py-2">
+                            <span class="text-muted-soc">> SUSP_PAYLOADS:</span>
+                            <span class="text-theme-warning fw-bold">{{ result.metrics.suspicious_count }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Middle overview grid -->
+            {% comment %} Swapped order: ports first, then sources {% endcomment %}
+<div class="col-lg-4 col-12">
+    <div class="soc-terminal-card p-3 h-100">
+        <div class="border-bottom border-soc-soft pb-2 mb-3">
+            <span class="share-tech-text text-theme-danger fw-bold"><i class="bi bi-bullseye me-2"></i>TARGET METRIC SHIFT</span>
+        </div>
+        <div class="share-tech-text small scrollable-soc-list" style="max-height: 200px; overflow-y: auto;">
+            {% if result.analysis_type == 'pcap' or result.analysis_type == 'pcapng' %}
+                {% for port, count in result.metrics.top_dst_ports.items %}
+                <div class="d-flex justify-content-between border-bottom border-soc-soft py-1">
+                    <span class="text-white fw-bold">Port :{{ port }}</span>
+                    <span class="badge bg-black border border-soc-soft text-muted rounded-0 px-2">{{ count }} pkts</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                {% for ip, count in result.metrics.top_src_ips.items %}
+                <div class="d-flex justify-content-between border-bottom border-soc-soft py-1">
+                    <span class="text-white">{{ ip }}</span>
+                    <span class="badge bg-black border border-soc-soft text-muted rounded-0 px-2">{{ count }}</span>
+                </div>
+                {% empty %}
+                <div class="text-muted text-center py-3">No targets resolved</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="col-lg-4 col-md-6 col-12">
+    <div class="soc-terminal-card p-3 h-100">
+        <div class="border-bottom border-soc-soft pb-2 mb-3">
+            <span class="share-tech-text text-theme-warning fw-bold"><i class="bi bi-bezier2 me-2"></i>SOURCE DISTRIBUTIONS</span>
+        </div>
+        <div class="share-tech-text small scrollable-soc-list" style="max-height: 200px; overflow-y: auto;">
+            {% if result.analysis_type == 'evtx' %}
+                {% for eid, count in result.metrics.event_id_distribution.items %}
+                <div class="d-flex justify-content-between border-bottom border-soc-soft py-1">
+                    <span class="text-white">Event ID {{ eid }}</span>
+                    <span class="badge bg-black border border-soc-soft text-muted rounded-0 px-2">{{ count }}x</span>
+                </div>
+                {% endfor %}
+            {% elif result.analysis_type == 'log' %}
+                {% for ep, count in result.metrics.top_endpoints.items %}
+                <div class="d-flex justify-content-between border-bottom border-soc-soft py-1">
+                    <span class="text-white text-truncate me-2" style="max-width: 220px;">{{ ep }}</span>
+                    <span class="badge bg-black border border-soc-soft text-muted rounded-0 px-2">{{ count }}</span>
+                </div>
+                {% endfor %}
+            {% else %}
+                {% for ip, count in result.metrics.top_src_ips.items %}
+                <div class="d-flex justify-content-between border-bottom border-soc-soft py-1">
+                    <span class="text-white">{{ ip }}</span>
+                    <span class="badge bg-black border border-soc-soft text-muted rounded-0 px-2">{{ count }}</span>
+                </div>
+                {% empty %}
+                <div class="text-muted text-center py-3">No sources resolved</div>
+                {% endfor %}
+            {% endif %}
+        </div>
+    </div>
+</div>
+        </div>
+    </div>
+
+    <!-- ===================== TAB 2: ALERTS EXPLORER ===================== -->
+    <div class="soc-tab-content" id="tab-alerts">
+        <div class="soc-terminal-card p-4">
+            <div class="border-bottom border-soc-soft pb-2 mb-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-2">
+                <span class="orbitron-heading text-theme-danger fw-bold">
+                    <i class="bi bi-shield-slash-fill me-2"></i>SECURITY INVESTIGATOR ALERTS
+                </span>
+                
+                <!-- Quick filter tags -->
+                <div class="d-flex flex-wrap gap-2">
+                    <button class="btn btn-sm btn-filter-soc active" data-filter="all">ALL</button>
+                    <button class="btn btn-sm btn-filter-soc" data-filter="critical">CRITICAL</button>
+                    <button class="btn btn-sm btn-filter-soc" data-filter="warning">WARNING</button>
+                    <button class="btn btn-sm btn-filter-soc" data-filter="info">INFO</button>
+                </div>
+            </div>
+
+            {% if result.security_alerts %}
+            <div class="table-responsive" style="max-height: 480px; overflow-y: auto;">
+                <table class="table table-dark table-borderless share-tech-text small align-middle mb-0">
+                    <thead>
+                        <tr class="border-bottom border-soc-soft">
+                            <th class="text-muted px-3" style="width: 80px;">INDEX</th>
+                            <th class="text-muted" style="width: 100px;">SEVERITY</th>
+                            <th class="text-muted" style="width: 150px;">TYPE</th>
+                            <th class="text-muted" style="width: 150px;">HOST/IP</th>
+                            <th class="text-muted" style="width: 140px;">TIMESTAMP</th>
+                            <th class="text-muted">THREAT PAYLOAD DETAIL</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for alert in result.security_alerts %}
+                        <tr class="border-bottom border-soc-soft alert-row-soc" data-severity="{{ alert.severity }}">
+                            <td class="px-3 text-muted">#{{ alert.line }}</td>
+                            <td>
+                                <span class="badge rounded-0 {% if alert.severity == 'critical' %}bg-theme-danger text-white{% elif alert.severity == 'warning' %}bg-theme-warning text-black{% else %}border border-theme-success text-theme-success{% endif %}" style="font-size: 0.7rem; font-weight: 700;">
+                                    {{ alert.severity|upper }}
+                                </span>
+                            </td>
+                            <td class="text-white fw-bold">{{ alert.type }}</td>
+                            <td class="text-info">{{ alert.ip }}</td>
+                            <td class="text-muted-soc">{{ alert.timestamp }}</td>
+                            <td class="text-white text-break" style="max-width: 480px;">
+                                <div class="payload-box">{{ alert.message }}</div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="text-center py-5 text-muted-soc share-tech-text">
+                <i class="bi bi-shield-check" style="font-size: 3rem; color: #00ff99;"></i>
+                <h4 class="mt-2 text-white">SYSTEM IMMUNE</h4>
+                <p>No critical security signatures were matched during scan.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- ===================== TAB 3: EVENT TIMELINE ===================== -->
+    <div class="soc-tab-content" id="tab-timeline">
+        <div class="soc-terminal-card p-4">
+            <div class="border-bottom border-soc-soft pb-2 mb-3">
+                <span class="orbitron-heading text-theme-success fw-bold">
+                    <i class="bi bi-clock-history me-2"></i>CHRONOLOGICAL NETWORK/EVENT TIMELINE FLOW
+                </span>
+            </div>
+
+            <div class="timeline-container-soc bg-black p-3 border border-soc-soft" style="max-height: 480px; overflow-y: auto;">
+                {% for event in result.timeline %}
+                <div class="d-flex align-items-start gap-3 border-bottom border-soc-soft py-2 share-tech-text timeline-entry-soc">
+                    <span class="text-muted share-tech-text" style="min-width: 70px;">#{{ event.index }}</span>
+                    <span class="{% if event.severity == 'critical' %}text-theme-danger{% elif event.severity == 'warning' %}text-theme-warning{% else %}text-info{% endif %} fw-bold" style="min-width: 80px;">
+                        {% if event.type == 'ALERT' %}<i class="bi bi-exclamation-triangle-fill text-theme-danger me-1"></i>ALERT
+                        {% elif event.type == 'TCP' %}<i class="bi bi-arrow-left-right text-info me-1"></i>TCP
+                        {% elif event.type == 'UDP' %}<i class="bi bi-broadcast text-info me-1"></i>UDP
+                        {% elif event.type == 'ICMP' %}<i class="bi bi-wifi text-theme-warning me-1"></i>ICMP
+                        {% else %}<i class="bi bi-journal-text text-theme-success me-1"></i>EVENT{% endif %}
+                    </span>
+                    <span class="text-muted" style="min-width: 100px;">{{ event.time }}</span>
+                    <span class="text-white" style="min-width: 130px;">{{ event.source }}</span>
+                    <span class="text-white-50 text-break">{{ event.detail }}</span>
+                </div>
+                {% empty %}
+                <div class="text-center py-5 text-muted-soc share-tech-text">No chronological sequence loaded.</div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================== TAB 4: NETWORK METRICS (PCAP ONLY) ===================== -->
+    {% if result.analysis_type == 'pcap' or result.analysis_type == 'pcapng' %}
+    <div class="soc-tab-content" id="tab-network">
+        <div class="row g-3">
+            <!-- Protocol Allocation percentage -->
+            <div class="col-lg-6 col-12">
+                <div class="soc-terminal-card p-4 h-100">
+                    <div class="border-bottom border-soc-soft pb-2 mb-3">
+                        <span class="orbitron-heading text-theme-success fw-bold"><i class="bi bi-bar-chart-fill me-2"></i>PROTOCOL ALLOCATION SHARE</span>
+                    </div>
+                    <div class="share-tech-text p-2">
+                        {% for proto, count in result.metrics.protocols.items %}
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between mb-1 small text-white">
+                                <span class="fw-bold">{{ proto }}</span>
+                                <span class="text-theme-success">{{ count }} packets</span>
+                            </div>
+                            <div class="progress rounded-0 border border-soc-soft" style="height: 12px; background-color: #03060a;">
+                                <div class="progress-bar {% if proto == 'TCP' %}bg-theme-success{% elif proto == 'UDP' %}bg-info{% else %}bg-theme-warning{% endif %}" 
+                                     role="progressbar" 
+                                     style="width: {% widthratio count result.metrics.total_packets 100 %}%">
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Advanced target endpoints mapping -->
+            <div class="col-lg-6 col-12">
+                <div class="soc-terminal-card p-4 h-100">
+                    <div class="border-bottom border-soc-soft pb-2 mb-3">
+                        <span class="orbitron-heading text-theme-warning fw-bold"><i class="bi bi-geo-fill me-2"></i>TOP CONGESTED HOST PATHS</span>
+                    </div>
+                    <div class="share-tech-text" style="max-height: 300px; overflow-y: auto;">
+                        {% for ip, count in result.metrics.top_dst_ips.items %}
+                        <div class="d-flex justify-content-between border-bottom border-soc-soft py-2 align-items-center">
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="bi bi-hdd-network text-info"></i>
+                                <span class="text-white">{{ ip }}</span>
+                            </div>
+                            <span class="badge bg-black border border-soc text-theme-warning rounded-0 px-3 py-1">{{ count }} hits</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- ===================== TAB 5: TELEMETRY ENGINE CONSOLE ===================== -->
+    <div class="soc-tab-content" id="tab-console">
+        <div class="soc-terminal-card p-4">
+            <div class="border-bottom border-soc-soft pb-2 mb-3 d-flex justify-content-between align-items-center">
+                <span class="orbitron-heading text-theme-success fw-bold">
+                    <i class="bi bi-terminal-fill me-2"></i>FORENSIC COMPLIANCE CONSOLE STREAM
+                </span>
+                <span class="badge bg-black border border-theme-success text-theme-success rounded-0 share-tech-text">
+                    ONLINE
+                </span>
+            </div>
+
+            <!-- Hacker shell log stream -->
+            <div class="hacker-shell-container p-3 position-relative">
+                <div class="cyber-scanlines"></div>
+                <div class="hacker-shell-output scrollable-soc-list" style="height: 380px; overflow-y: auto; font-family: 'Share Tech Mono', monospace;">
+                    {% for log_line in result.console_logs %}
+                    <div class="log-line-cmd py-1">
+                        <span class="text-theme-success me-2">[CYBEROPS] $</span>
+                        <span class="text-white">{{ log_line }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% endif %}
+</div>
+
+<!-- ===================== SOC PREMIUM CSS VARIABLES & CORE STYLING ===================== -->
+<style>
+    /* Premium Themes Colors */
+    :root {
+        --soc-bg-main: #04080e;
+        --soc-border: #1a2a40;
+        --soc-border-soft: rgba(26, 42, 64, 0.5);
+        --soc-banner-card: #090e18;
+        --theme-success: #00ff99;
+        --theme-warning: #ffcc00;
+        --theme-danger: #ff3366;
+        --theme-info: #00e5ff;
+    }
+
+    .deep-forensic-soc {
+        background: radial-gradient(circle at center, #070c14 0%, #030508 100%) !important;
+        font-family: 'Inter', sans-serif;
+        color: #fff !important;
+        position: relative;
+        padding-bottom: 90px !important;
+    }
+
+    /* CRT scanline simulation */
+    .crt-overlay {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+        background-size: 100% 4px, 6px 100%;
+        z-index: 10;
+        pointer-events: none;
+    }
+
+    /* Fonts definition */
+    .orbitron-heading {
+        font-family: 'Orbitron', sans-serif;
+        letter-spacing: 1px;
+    }
+    .share-tech-text {
+        font-family: 'Share Tech Mono', monospace;
+    }
+
+    /* Threat neon indicator pulse */
+    .pulse-indicator-neon {
+        width: 10px; height: 10px; border-radius: 50%;
+        background-color: var(--theme-success);
+        box-shadow: 0 0 10px var(--theme-success);
+        animation: glowPulse 1.8s infinite alternate;
+    }
+    @keyframes glowPulse {
+        0% { transform: scale(0.9); box-shadow: 0 0 4px var(--theme-success); }
+        100% { transform: scale(1.15); box-shadow: 0 0 14px var(--theme-success); }
+    }
+
+    /* Terminal general block */
+    .soc-terminal-card {
+        background: rgba(9, 14, 24, 0.8) !important;
+        border: 2px solid var(--soc-border) !important;
+        border-radius: 2px !important;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        transition: all 0.3s ease;
+    }
+    .soc-terminal-card:hover {
+        border-color: rgba(0, 255, 153, 0.2) !important;
+    }
+
+    /* Custom upload header group */
+    .cyber-upload-border {
+        border: 2px solid var(--theme-success) !important;
+        box-shadow: 0 0 15px rgba(0, 255, 153, 0.15);
+    }
+    .btn-cyber-success {
+        background: var(--theme-success) !important;
+        color: #000 !important;
+        border: none !important;
+        border-radius: 0 !important;
+        box-shadow: 0 0 10px rgba(0, 255, 153, 0.4);
+        transition: all 0.2s ease-in-out;
+    }
+    .btn-cyber-success:hover {
+        background: #00e685 !important;
+        box-shadow: 0 0 20px rgba(0, 255, 153, 0.6);
+        transform: translateY(-1px);
+    }
+
+    /* Scan progress telemetry */
+    .forensic-progress-bar {
+        background-color: #050a12;
+        border: 1px solid var(--soc-border);
+        padding: 2px;
+        overflow: hidden;
+    }
+    .forensic-progress-fill {
+        height: 8px;
+        background: linear-gradient(90deg, var(--theme-success), var(--theme-info), var(--theme-success));
+        background-size: 200% 100%;
+        animation: activeScanner 2s linear infinite;
+        width: 100%;
+    }
+    @keyframes activeScanner {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+
+    /* Empty state radar sweep animation */
+    .radar-container {
+        border-color: rgba(0, 255, 153, 0.2) !important;
+        background: radial-gradient(circle at center, rgba(0, 255, 153, 0.04) 0%, rgba(9, 14, 24, 0.9) 100%) !important;
+    }
+    .radar-sweep {
+        position: absolute;
+        top: -50%; left: -50%; width: 200%; height: 200%;
+        background: conic-gradient(from 0deg, rgba(0, 255, 153, 0.08) 0deg, transparent 90deg, transparent 360deg);
+        animation: sweepRadar 4s linear infinite;
+        pointer-events: none;
+    }
+    @keyframes sweepRadar {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .pulse-critical-icon {
+        animation: pulseHeart 2s infinite alternate;
+    }
+    @keyframes pulseHeart {
+        0% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(0, 255, 153, 0.2)); }
+        100% { transform: scale(1.05); filter: drop-shadow(0 0 30px rgba(0, 255, 153, 0.4)); }
+    }
+    .radar-tag {
+        background: rgba(10, 20, 35, 0.7);
+        border: 1px solid var(--soc-border);
+        color: #8da4c0;
+        font-family: 'Share Tech Mono', monospace;
+        padding: 8px 20px;
+        font-size: 0.85rem;
+        letter-spacing: 1px;
+    }
+
+    /* Threat banner styling verdict */
+    .verdict-banner {
+        border: 2px solid var(--soc-border) !important;
+        background-color: var(--soc-banner-card) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+        position: relative;
+    }
+    .glow-bg-accent {
+        position: absolute;
+        top: 0; right: 0; width: 350px; height: 350px;
+        filter: blur(140px);
+        pointer-events: none;
+        z-index: 1;
+    }
+    .banner-danger-soc { border-color: rgba(255, 51, 102, 0.4) !important; }
+    .banner-danger-soc .glow-bg-accent { background: rgba(255, 51, 102, 0.1); }
+    .banner-warning-soc { border-color: rgba(255, 204, 0, 0.4) !important; }
+    .banner-warning-soc .glow-bg-accent { background: rgba(255, 204, 0, 0.08); }
+    .banner-success-soc { border-color: rgba(0, 255, 153, 0.4) !important; }
+    .banner-success-soc .glow-bg-accent { background: rgba(0, 255, 153, 0.08); }
+
+    .border-left-danger { border-left: 6px solid var(--theme-danger) !important; }
+    .border-left-warning { border-left: 6px solid var(--theme-warning) !important; }
+    .border-left-success { border-left: 6px solid var(--theme-success) !important; }
+
+    /* SVG Radial Gauge Arc Chart */
+    .radial-gauge-container { width: 70px; height: 70px; }
+    .circular-chart { display: block; max-width: 100%; max-height: 100%; }
+    .circle-bg { fill: none; stroke: #080f18; stroke-width: 2.8; }
+    .circle { fill: none; stroke-width: 2.8; stroke-linecap: round; transition: stroke-dasharray 0.35s; }
+    .stroke-theme-success { stroke: var(--theme-success); filter: drop-shadow(0 0 4px var(--theme-success)); }
+    .stroke-theme-warning { stroke: var(--theme-warning); filter: drop-shadow(0 0 4px var(--theme-warning)); }
+    .stroke-theme-danger { stroke: var(--theme-danger); filter: drop-shadow(0 0 4px var(--theme-danger)); }
+
+    /* Colors shortcuts */
+    .text-theme-success { color: var(--theme-success) !important; }
+    .text-theme-warning { color: var(--theme-warning) !important; }
+    .text-theme-danger { color: var(--theme-danger) !important; }
+    .bg-black-soft { background: #030509 !important; }
+    .border-soc-soft { border-color: var(--soc-border-soft) !important; }
+    .text-muted-soc { color: #8fa0b5 !important; }
+
+    /* Interactive dashboard tabs */
+    .soc-tab-btn {
+        background: rgba(10, 20, 35, 0.5);
+        border: 1px solid var(--soc-border);
+        color: #8fa0b5;
+        padding: 10px 24px;
+        font-size: 0.85rem;
+        cursor: pointer;
+        transition: all 0.25s ease;
+    }
+    .soc-tab-btn:hover {
+        color: #fff;
+        border-color: var(--theme-success);
+    }
+    .soc-tab-btn.active {
+        background: rgba(0, 255, 153, 0.08);
+        border-color: var(--theme-success);
+        color: var(--theme-success);
+        box-shadow: 0 0 10px rgba(0, 255, 153, 0.1);
+    }
+    .soc-tab-content { display: none; }
+    .soc-tab-content.active { display: block; animation: tabFadeIn 0.3s ease-out; }
+    @keyframes tabFadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Captured flag cyberbox */
+    .ctf-glow-card {
+        border-color: rgba(255, 204, 0, 0.4) !important;
+        background: linear-gradient(135deg, rgba(255, 204, 0, 0.03) 0%, rgba(9, 14, 24, 0.9) 100%) !important;
+    }
+    .ctf-flag-cyberbox {
+        background: rgba(255, 204, 0, 0.04);
+        border: 1px solid rgba(255, 204, 0, 0.15);
+        transition: all 0.25s ease;
+    }
+    .ctf-flag-cyberbox:hover {
+        background: rgba(255, 204, 0, 0.08);
+        border-color: rgba(255, 204, 0, 0.35);
+        transform: scale(1.01);
+    }
+    .trophy-glow-icon {
+        width: 38px; height: 38px; border-radius: 50%;
+        background: rgba(255, 204, 0, 0.15);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 1.1rem;
+        box-shadow: 0 0 10px rgba(255, 204, 0, 0.2);
+    }
+    .ctf-flag-value {
+        color: var(--theme-warning);
+        font-size: 1.1rem;
+        font-weight: 700;
+        text-shadow: 0 0 8px rgba(255, 204, 0, 0.4);
+    }
+    .btn-cyber-amber {
+        background: transparent;
+        border: 1px solid rgba(255, 204, 0, 0.3);
+        color: var(--theme-warning);
+    }
+    .btn-cyber-amber:hover {
+        background: rgba(255, 204, 0, 0.15);
+        color: var(--theme-warning);
+    }
+
+    /* Metric large block nodes */
+    .metric-block {
+        background: rgba(12, 19, 32, 0.7);
+        border: 1px solid var(--soc-border);
+        box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.4);
+    }
+
+    /* Cyber console scanner logs stream */
+    .hacker-shell-container {
+        background-color: #010408;
+        border: 2px solid var(--soc-border);
+        box-shadow: inset 0 0 30px rgba(0, 0, 0, 0.95);
+        overflow: hidden;
+    }
+    .cyber-scanlines {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.12) 50%);
+        background-size: 100% 3px;
+        pointer-events: none;
+        z-index: 5;
+    }
+    .log-line-cmd {
+        font-size: 0.9rem;
+        line-height: 1.4;
+        letter-spacing: 0.5px;
+    }
+
+    /* Investigator interactive alerts list */
+    .alert-row-soc {
+        transition: background-color 0.2s ease;
+    }
+    .alert-row-soc:hover {
+        background-color: rgba(255, 255, 255, 0.02) !important;
+    }
+    .payload-box {
+        background: #020408;
+        border: 1px solid #142235;
+        padding: 8px 12px;
+        color: #b0c8e2;
+        font-size: 0.8rem;
+        border-radius: 1px;
+    }
+
+    /* Filter button controls */
+    .btn-filter-soc {
+        background: transparent;
+        border: 1px solid var(--soc-border);
+        color: #8fa0b5;
+        font-family: 'Share Tech Mono', monospace;
+        letter-spacing: 1px;
+        border-radius: 0;
+        transition: all 0.2s;
+    }
+    .btn-filter-soc:hover {
+        border-color: var(--theme-success);
+        color: #fff;
+    }
+    .btn-filter-soc.active {
+        background: rgba(0, 255, 153, 0.08);
+        border-color: var(--theme-success);
+        color: var(--theme-success);
+    }
+
+    /* Scrollbars custom SOC styles */
+    .scrollable-soc-list::-webkit-scrollbar,
+    .hacker-shell-output::-webkit-scrollbar,
+    .timeline-container-soc::-webkit-scrollbar,
+    .table-responsive::-webkit-scrollbar {
+        width: 5px; height: 5px;
+    }
+    .scrollable-soc-list::-webkit-scrollbar-track,
+    .hacker-shell-output::-webkit-scrollbar-track,
+    .timeline-container-soc::-webkit-scrollbar-track,
+    .table-responsive::-webkit-scrollbar-track {
+        background: #020408;
+    }
+    .scrollable-soc-list::-webkit-scrollbar-thumb,
+    .hacker-shell-output::-webkit-scrollbar-thumb,
+    .timeline-container-soc::-webkit-scrollbar-thumb,
+    .table-responsive::-webkit-scrollbar-thumb {
+        background: var(--soc-border);
+    }
+    .scrollable-soc-list::-webkit-scrollbar-thumb:hover,
+    .hacker-shell-output::-webkit-scrollbar-thumb:hover,
+    .timeline-container-soc::-webkit-scrollbar-thumb:hover,
+    .table-responsive::-webkit-scrollbar-thumb:hover {
+        background: var(--theme-success);
+    }
+
+    /* Custom File Browser inputs */
+    input[type="file"]::file-selector-button {
+        background-color: #0b121e;
+        color: var(--theme-success);
+        border: 1px solid var(--soc-border);
+        padding: 5px 12px;
+        font-family: 'Share Tech Mono', monospace;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    input[type="file"]::file-selector-button:hover {
+        background-color: var(--theme-success);
+        color: #000;
+    }
+
+    /* Timeline entries style */
+    .timeline-entry-soc {
+        transition: background-color 0.2s ease;
+    }
+    .timeline-entry-soc:hover {
+        background-color: rgba(0, 255, 153, 0.02);
+    }
+</style>
+
+<!-- ===================== SOC CONTROLLERS & BEHAVIORS ===================== -->
+<script>
+    document.addEventListener("DOMContentLoaded", function() {
+        // Form Submission Progress Animation
+        const form = document.getElementById('forensicUploadForm');
+        if (form) {
+            form.addEventListener('submit', function() {
+                const pBar = document.getElementById('forensicProgressBar');
+                const btn = document.getElementById('forensicSubmitBtn');
+                const percentText = document.getElementById('scanPercent');
+                
+                pBar.style.display = 'block';
+                btn.disabled = true;
+                btn.innerHTML = '<i class="bi bi-cpu-fill spin-cyber me-1"></i> ANALYSING...';
+                
+                // Simulating percentage incrementing for visuals
+                let percentage = 0;
+                const interval = setInterval(() => {
+                    if (percentage < 95) {
+                        percentage += Math.floor(Math.random() * 15) + 5;
+                        if (percentage > 95) percentage = 95;
+                        percentText.innerText = percentage + '%';
+                    }
+                }, 180);
+            });
+        }
+
+        // Tab Navigation click handlers
+        const tabs = document.querySelectorAll('.soc-tab-btn');
+        tabs.forEach(btn => {
+            btn.addEventListener('click', function() {
+                // Deactivate all buttons and tab panels
+                tabs.forEach(b => b.classList.remove('active'));
+                document.querySelectorAll('.soc-tab-content').forEach(p => p.classList.remove('active'));
+
+                // Activate current selection
+                this.classList.add('active');
+                const targetPanel = document.querySelector(this.dataset.target);
+                if (targetPanel) {
+                    targetPanel.classList.add('active');
+                }
+            });
+        });
+
+        // Live filtering of alerts inside threats tab
+        const filterBtns = document.querySelectorAll('.btn-filter-soc');
+        filterBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                filterBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                
+                const filter = this.dataset.filter;
+                document.querySelectorAll('.alert-row-soc').forEach(row => {
+                    if (filter === 'all') {
+                        row.style.display = '';
+                    } else {
+                        row.style.display = row.dataset.severity === filter ? '' : 'none';
+                    }
+                });
+            });
+        });
+        
+        // Auto scroll console log window to bottom
+        const consoleOut = document.querySelector('.hacker-shell-output');
+        if (consoleOut) {
+            consoleOut.scrollTop = consoleOut.scrollHeight;
+        }
+    });
+</script>
+
+{% endblock %}

@@ -1,0 +1,418 @@
+{% extends 'analyzer/base.html' %}
+{% block content %}
+
+<div class="container-fluid font-monospace text-light px-4 py-3 soc-dashboard-wrapper">
+    
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="soc-card p-3 d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+                <div>
+                    <h5 class="theme-glow-text mb-1 fw-bold"><i class="bi bi-folder-symlink me-2"></i>CYBEROPS PLATFORM // DEEP FILE INJECTOR & SCANNER</h5>
+                    <p class="soc-label-muted small mb-0">SYS_STATUS: <span class="text-theme-success fw-bold">● READY [STATIC_PAYLOAD_MODE]</span></p>
+                </div>
+                
+                <form method="POST" enctype="multipart/form-data" class="m-0 flex-grow-1 flex-md-grow-0" style="min-width: 450px;">
+                    {% csrf_token %}
+                    <div class="input-group border-theme p-1" style="background-color: #000000;">
+                        <span class="input-group-text bg-transparent border-0 text-theme-success fw-bold">> FILE://</span>
+                        <input type="file" name="file_target" class="form-control bg-transparent text-white border-0 soc-field font-monospace" required>
+                        <button class="btn btn-theme-success text-black fw-bold px-4" type="submit">UPLOAD_&amp;_SCAN</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if result %}
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="soc-banner-card p-4 position-relative overflow-hidden 
+                {% if result.verdict == 'danger' %}border-danger-theme bg-danger-soft-theme border-left-danger
+                {% elif result.verdict == 'suspicious' %}border-warning-theme bg-warning-soft-theme border-left-warning
+                {% else %}border-success-theme bg-success-soft-theme border-left-success{% endif %}">
+                
+                <div class="row align-items-center">
+                    <div class="col-md-7 text-center text-md-start">
+                        <span class="badge mb-2 tracking-widest px-2 py-1 rounded-0 border {% if result.verdict == 'danger' %}text-theme-danger border-danger-theme{% elif result.verdict == 'suspicious' %}text-theme-warning border-warning-theme{% else %}text-theme-success border-success-theme{% endif %}" style="font-size: 0.7rem;">
+                            [{{ result.verdict|upper }}_PAYLOAD_DETECTED]
+                        </span>
+                        <div class="display-6 text-white fw-bold tracking-wider text-truncate raw-url-glow">{{ result.file_name }}</div>
+                    </div>
+                    
+                    <div class="col-md-5 border-start-md border-theme-dark-soft ps-md-4 mt-3 mt-md-0 text-center text-md-end">
+                        <div class="d-inline-block text-center px-4 py-2 bg-black border border-theme-dark-soft">
+                            <div class="soc-label-muted small mb-1">// THREAT_LEVEL_INDEX:</div>
+                            <h2 class="fw-bold m-0 {% if result.verdict == 'danger' %}text-theme-danger
+                                {% elif result.verdict == 'suspicious' %}text-theme-warning
+                                {% else %}text-theme-success{% endif %}">
+                                {{ result.risk_score }}% RISK
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-lg-7 col-12">
+            <div class="soc-card p-3 h-100">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3 d-flex justify-content-between align-items-center">
+                    <span class="text-theme-success fw-bold"><i class="bi bi-cpu-fill me-2"></i>FILE METADATA & STATIC TELEMETRY</span>
+                    <span class="badge bg-black border border-theme-success text-theme-success small px-2 rounded-0">HARDWARE INTEL</span>
+                </div>
+                
+                <div class="row g-2 small font-monospace">
+                    <div class="col-12 border-bottom border-theme-dark-soft pb-2">
+                        <span class="soc-label-muted d-block">> SHA256 Signature Token:</span>
+                        <span class="text-warning fw-bold text-break" style="font-size: 0.85rem;">{{ result.sha256 }}</span>
+                    </div>
+                    <div class="col-sm-6 border-bottom border-theme-dark-soft pt-1 pb-2">
+                        <span class="soc-label-muted d-block">> Allocated File Size:</span>
+                        <span class="text-white fw-bold">{{ result.file_size }}</span>
+                    </div>
+                    <div class="col-sm-6 border-bottom border-theme-dark-soft pt-1 pb-2">
+                        <span class="soc-label-muted d-block">> Sub-Type Compilation:</span>
+                        <span class="text-white fw-bold text-truncate d-block">{{ result.file_type }}</span>
+                    </div>
+                    <div class="col-12 pt-1 pb-1">
+                        <span class="soc-label-muted d-block">> Magic Identification Bytes:</span>
+                        <span class="text-white small text-truncate d-block">{{ result.magic_bytes }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5 col-12">
+            <div class="soc-card p-3 h-100 d-flex flex-column justify-content-between">
+                <div>
+                    <div class="border-bottom border-theme-dark-soft pb-2 mb-3 d-flex justify-content-between align-items-center">
+                        <span class="text-theme-success fw-bold"><i class="bi bi-shield-check me-2"></i>VIRUSTOTAL DETECTION ENGINE</span>
+                        <span class="text-muted small">[API_V3_FEED]</span>
+                    </div>
+                    
+                    <div class="small lh-lg">
+                        <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-2">
+                            <span class="soc-label-muted">> Malicious Core Detections:</span>
+                            <span class="fw-bold text-theme-danger">
+                                {{ result.malicious_count }} Engines Flagged
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-2">
+                            <span class="soc-label-muted">> Suspicious Code Structures:</span>
+                            <span class="fw-bold text-theme-warning">
+                                {{ result.suspicious_count }} Alerts
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between py-2">
+                            <span class="soc-label-muted">> Clean / Undetected Pass:</span>
+                            <span class="fw-bold text-theme-success">
+                                {{ result.clean_count }} / {{ result.total_engines }} Cleaned
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if result.analysis_type == 'pcap' and result.native_data %}
+    <!-- PCAP TELEMETRY PANEL -->
+    <div class="row g-3 mb-3">
+        <div class="col-lg-4 col-12">
+            <div class="soc-card p-3 h-100">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3">
+                    <span class="text-theme-success fw-bold"><i class="bi bi-diagram-3-fill me-2"></i>PROTOCOL DISTRIBUTION</span>
+                </div>
+                <div class="small font-monospace">
+                    {% for proto, count in result.native_data.protocols.items %}
+                    <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-1">
+                        <span class="text-white fw-bold">{{ proto }}</span>
+                        <span class="text-theme-success">{{ count }} pkts</span>
+                    </div>
+                    {% empty %}
+                    <div class="text-muted">No protocols detected</div>
+                    {% endfor %}
+                </div>
+                <div class="mt-3 pt-2 border-top border-theme-dark-soft">
+                    <div class="d-flex justify-content-between small">
+                        <span class="soc-label-muted">> Total Packets:</span>
+                        <span class="text-white fw-bold">{{ result.native_data.total_packets }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between small">
+                        <span class="soc-label-muted">> Total Data:</span>
+                        <span class="text-white fw-bold">{{ result.native_data.total_data_bytes }} bytes</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-12">
+            <div class="soc-card p-3 h-100">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3">
+                    <span class="text-theme-warning fw-bold"><i class="bi bi-hdd-network-fill me-2"></i>TOP SOURCE IPs</span>
+                </div>
+                <div class="console-scroll-soc small font-monospace" style="max-height: 200px; overflow-y: auto;">
+                    {% for ip, count in result.native_data.top_src_ips.items %}
+                    <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-1">
+                        <span class="text-white">{{ ip }}</span>
+                        <span class="badge bg-black border border-theme-dark-soft text-muted rounded-0">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-12">
+            <div class="soc-card p-3 h-100">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3">
+                    <span class="text-theme-danger fw-bold"><i class="bi bi-bullseye me-2"></i>TARGETED PORTS</span>
+                </div>
+                <div class="console-scroll-soc small font-monospace" style="max-height: 200px; overflow-y: auto;">
+                    {% for port, count in result.native_data.top_dst_ports.items %}
+                    <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-1">
+                        <span class="text-white fw-bold">:{{ port }}</span>
+                        <span class="badge bg-black border border-theme-dark-soft text-muted rounded-0">{{ count }} hits</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if result.analysis_type == 'evtx' and result.native_data %}
+    <!-- EVTX EVENT TIMELINE PANEL -->
+    <div class="row g-3 mb-3">
+        <div class="col-lg-4 col-12">
+            <div class="soc-card p-3 h-100">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3">
+                    <span class="text-theme-success fw-bold"><i class="bi bi-pc-display me-2"></i>EVENT LOG SUMMARY</span>
+                </div>
+                <div class="small font-monospace">
+                    <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-2">
+                        <span class="soc-label-muted">> Computer:</span>
+                        <span class="text-white fw-bold">{{ result.native_data.computer_name }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-2">
+                        <span class="soc-label-muted">> Total Events:</span>
+                        <span class="text-white fw-bold">{{ result.native_data.total_events }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-2">
+                        <span class="soc-label-muted">> Critical Events:</span>
+                        <span class="text-theme-danger fw-bold">{{ result.native_data.critical_count }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-2">
+                        <span class="soc-label-muted">> Warning Events:</span>
+                        <span class="text-theme-warning fw-bold">{{ result.native_data.warning_count }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between py-2">
+                        <span class="soc-label-muted">> Failed Logons (4625):</span>
+                        <span class="{% if result.native_data.failed_logons > 10 %}text-theme-danger{% else %}text-white{% endif %} fw-bold">{{ result.native_data.failed_logons }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-12">
+            <div class="soc-card p-3 h-100">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3">
+                    <span class="text-theme-warning fw-bold"><i class="bi bi-bar-chart-fill me-2"></i>EVENT ID DISTRIBUTION</span>
+                </div>
+                <div class="console-scroll-soc small font-monospace" style="max-height: 230px; overflow-y: auto;">
+                    {% for eid, count in result.native_data.event_id_distribution.items %}
+                    <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-1">
+                        <span class="text-white fw-bold">ID {{ eid }}</span>
+                        <span class="badge bg-black border border-theme-dark-soft text-muted rounded-0">{{ count }}x</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-12">
+            <div class="soc-card p-3 h-100">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3">
+                    <span class="text-theme-danger fw-bold"><i class="bi bi-exclamation-triangle-fill me-2"></i>SECURITY ALERTS TIMELINE</span>
+                </div>
+                <div class="console-scroll-soc small font-monospace" style="max-height: 230px; overflow-y: auto;">
+                    {% for alert in result.native_data.security_alerts %}
+                    <div class="border-bottom border-theme-dark-soft py-2">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="badge rounded-0 {% if alert.severity == 'critical' %}bg-danger{% elif alert.severity == 'warning' %}bg-warning text-black{% else %}border border-theme-success text-theme-success{% endif %}" style="font-size: 0.7rem;">{{ alert.severity|upper }}</span>
+                            <span class="soc-label-muted">{{ alert.timestamp }}</span>
+                        </div>
+                        <div class="text-white"><strong>ID {{ alert.event_id }}:</strong> {{ alert.description }}</div>
+                    </div>
+                    {% empty %}
+                    <div class="text-muted">No security events detected</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if result.analysis_type == 'log' and result.native_data %}
+    <!-- LOG ANALYSIS PANEL -->
+    <div class="row g-3 mb-3">
+        <div class="col-lg-4 col-12">
+            <div class="soc-card p-3 h-100">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3">
+                    <span class="text-theme-success fw-bold"><i class="bi bi-journal-code me-2"></i>LOG OVERVIEW</span>
+                </div>
+                <div class="small font-monospace">
+                    <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-2">
+                        <span class="soc-label-muted">> Total Lines:</span>
+                        <span class="text-white fw-bold">{{ result.native_data.total_lines }}</span>
+                    </div>
+                </div>
+
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-2 mt-3">
+                    <span class="text-theme-warning fw-bold small">HTTP RESPONSE CODES</span>
+                </div>
+                <div class="small font-monospace">
+                    {% for code, count in result.native_data.http_codes.items %}
+                    <div class="d-flex justify-content-between py-1">
+                        <span class="{% if code == '403' or code == '500' %}text-theme-danger{% elif code == '404' %}text-theme-warning{% else %}text-white{% endif %} fw-bold">{{ code }}</span>
+                        <span class="text-muted">{{ count }}x</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-12">
+            <div class="soc-card p-3 h-100">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3">
+                    <span class="text-theme-danger fw-bold"><i class="bi bi-shield-exclamation me-2"></i>THREAT DETECTION SUMMARY</span>
+                </div>
+                <div class="small font-monospace">
+                    {% for threat_type, count in result.native_data.threat_summary.items %}
+                    <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-2">
+                        <span class="text-white">{{ threat_type }}</span>
+                        <span class="badge rounded-0 {% if count > 0 %}bg-danger{% else %}border border-theme-success text-theme-success{% endif %}">{{ count }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4 col-12">
+            <div class="soc-card p-3 h-100">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3">
+                    <span class="text-theme-warning fw-bold"><i class="bi bi-geo-alt-fill me-2"></i>TOP SOURCE IPs</span>
+                </div>
+                <div class="console-scroll-soc small font-monospace" style="max-height: 230px; overflow-y: auto;">
+                    {% for ip, count in result.native_data.top_src_ips.items %}
+                    <div class="d-flex justify-content-between border-bottom border-theme-dark-soft py-1">
+                        <span class="text-white">{{ ip }}</span>
+                        <span class="badge bg-black border border-theme-dark-soft text-muted rounded-0">{{ count }}</span>
+                    </div>
+                    {% empty %}
+                    <div class="text-muted">No IPs extracted</div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if result.native_data.sqli_hits %}
+    <div class="row g-3 mb-3">
+        <div class="col-12">
+            <div class="soc-card p-3">
+                <div class="border-bottom border-theme-dark-soft pb-2 mb-3">
+                    <span class="text-theme-danger fw-bold"><i class="bi bi-bug-fill me-2"></i>SQLi / PATH TRAVERSAL / XSS PAYLOAD STREAMS</span>
+                </div>
+                <div class="console-scroll-soc p-3 bg-black border border-theme-dark-soft" style="max-height: 250px; overflow-y: auto;">
+                    {% for hit in result.native_data.sqli_hits %}
+                    <div class="d-flex align-items-start gap-2 border-bottom border-theme-dark-soft pb-2 mb-1 small font-monospace">
+                        <span class="text-theme-danger fw-bold" style="min-width: 60px;">[L:{{ hit.line }}]</span>
+                        <span class="text-white text-break">{{ hit.content }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endif %}
+
+    {% endif %}
+
+</div>
+
+<style>
+    html, body {
+        background-color: #04070a !important;
+        color: #e2e8f0 !important;
+    }
+    .soc-dashboard-wrapper {
+        background: radial-gradient(circle at top right, rgba(0, 255, 153, 0.05), rgba(4, 7, 10, 1)) !important;
+        padding-bottom: 80px !important; 
+    }
+    .soc-label-muted { color: #8fa0b0 !important; }
+    .text-theme-success { color: #00ff99 !important; }
+    .text-theme-warning { color: #ffaa00 !important; }
+    .text-theme-danger { color: #ff3366 !important; }
+    
+    .theme-glow-text {
+        color: #00ff99 !important;
+        text-shadow: 0 0 12px rgba(0, 255, 153, 0.35);
+    }
+    .raw-url-glow { text-shadow: 0 0 15px rgba(255, 255, 255, 0.1); }
+
+    .btn-theme-success {
+        background-color: #00ff99 !important;
+        border-color: #00ff99 !important;
+        color: #000000 !important;
+        border-radius: 0px !important;
+    }
+    .btn-theme-success:hover {
+        background-color: #00e676 !important;
+        box-shadow: 0 0 15px rgba(0, 255, 153, 0.5);
+    }
+
+    .soc-card {
+        background-color: #090e15 !important;
+        border: 2px solid #1a293d !important;
+        border-radius: 0px !important;
+    }
+    .soc-banner-card { 
+        border-radius: 0px !important; 
+        border: 2px solid #1a293d !important; 
+    }
+    .border-theme { border: 2px solid #00ff99 !important; }
+    
+    .border-success-theme { border-color: rgba(0, 255, 153, 0.4) !important; }
+    .border-warning-theme { border-color: rgba(255, 170, 0, 0.4) !important; }
+    .border-danger-theme { border-color: rgba(255, 51, 102, 0.4) !important; }
+
+    .border-left-success { border-left: 5px solid var(--soc-neon-green, #00ff99) !important; }
+    .border-left-warning { border-left: 5px solid var(--soc-neon-warning, #ffaa00) !important; }
+    .border-left-danger { border-left: 5px solid var(--soc-neon-danger, #ff3366) !important; }
+
+    .bg-success-soft-theme { background: linear-gradient(135deg, #0d221a 0%, #04070a 100%) !important; }
+    .bg-warning-soft-theme { background: linear-gradient(135deg, #2b1f0d 0%, #04070a 100%) !important; }
+    .bg-danger-soft-theme { background: linear-gradient(135deg, #2d0f0f 0%, #04070a 100%) !important; }
+    
+    .border-theme-dark-soft { border-color: #1a293d !important; }
+    @media (min-width: 768px) {
+        .border-start-md { border-left: 2px solid #1a293d !important; }
+    }
+    
+    /* Input file style tuning */
+    input[type="file"]::file-selector-button {
+        background-color: #1a293d;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        font-family: monospace;
+        cursor: pointer;
+    }
+    input[type="file"]::file-selector-button:hover {
+        background-color: #00ff99;
+        color: black;
+    }
+</style>
+{% endblock %}

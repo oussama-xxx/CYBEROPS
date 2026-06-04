@@ -1,0 +1,1888 @@
+{% extends 'analyzer/base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid px-2 px-md-4 py-2">
+    
+    <!-- ===================================================================== -->
+    <!-- HEADER SEC-OPS HUD SECTION -->
+    <!-- ===================================================================== -->
+    <div class="soc-glass-panel mb-4 p-3 border-theme-dark-soft position-relative overflow-hidden" id="hudHeader">
+        <div class="hazard-stripe-bg" id="hazardStripe"></div>
+        <div class="d-flex flex-column flex-md-row justify-content-between align-items-md-center position-relative" style="z-index: 2;">
+            <div class="mb-3 mb-md-0">
+                <div class="d-flex align-items-center gap-3">
+                    <h1 class="text-theme-success mb-0 tracking-widest fw-black fs-3" id="hudMainTitle">
+                        <i class="bi bi-eye-fill"></i> NETWATCH // SEC-OPS
+                    </h1>
+                    <span class="badge alert-status-badge text-black bg-theme-success" id="threatTextBadge">LEVEL: NOMINAL</span>
+                </div>
+                <p class="text-muted mb-0 small mt-1">
+                    <i class="bi bi-cpu-fill"></i> CORRELATOR ENGINE v4.21 // IP: 10.10.8.254 // Status: <span class="text-theme-success" id="engineStatusText">SECURE_TUNNEL_ACTIVE</span>
+                </p>
+            </div>
+            
+            <div class="d-flex flex-wrap align-items-center gap-3">
+                <!-- Alarm waveform visualizer -->
+                <div class="d-flex align-items-center gap-2 bg-black-opacity border-theme-dark-soft px-3 py-2 rounded">
+                    <div class="equalizer-container d-flex gap-1" id="eqContainer">
+                        <span class="eq-bar"></span>
+                        <span class="eq-bar"></span>
+                        <span class="eq-bar"></span>
+                        <span class="eq-bar"></span>
+                        <span class="eq-bar"></span>
+                    </div>
+                    <button class="btn btn-outline-success btn-xs uppercase font-monospace py-1 px-2 border-0" id="audioToggleBtn" onclick="toggleAudioAlarm()">
+                        <i class="bi bi-volume-mute-fill" id="audioIcon"></i> SOUND OFF
+                    </button>
+                </div>
+
+                <!-- Threat level simulation trigger -->
+                <div class="bg-black-opacity border-theme-dark-soft px-3 py-2 rounded d-flex align-items-center gap-2">
+                    <span class="text-muted small uppercase font-monospace">Simulate Threat:</span>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <button type="button" class="btn btn-xs btn-outline-success active" onclick="setThreatLevel('NORMAL')">SAFE</button>
+                        <button type="button" class="btn btn-xs btn-outline-warning" onclick="setThreatLevel('WARNING')">WARN</button>
+                        <button type="button" class="btn btn-xs btn-outline-danger" onclick="setThreatLevel('CRITICAL')">ALERT</button>
+                    </div>
+                </div>
+
+                <div class="text-end font-monospace small">
+                    <div class="text-muted">
+                        <i class="bi bi-clock-fill"></i> UTC: <span id="liveClock">00:00:00</span>
+                    </div>
+                    <div class="text-theme-success font-weight-bold" id="operatorBadge">
+                        <i class="bi bi-person-badge"></i> OPERATOR: {{ user.username|upper }}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- REAL-TIME TELEMETRY GRID -->
+    <!-- ===================================================================== -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="soc-glass-panel telemetry-card text-center p-3" id="statCardTotal">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <i class="bi bi-hdd-stack fs-3 text-info"></i>
+                    <span class="badge bg-info-opacity text-info">NET_NODES</span>
+                </div>
+                <h2 class="text-info mb-0 font-monospace display-6 fw-bold" id="statTotalHosts">{{ zabbix_data.total_hosts|default:"23" }}</h2>
+                <div class="small text-muted text-uppercase tracking-wider">Total Hosts Monitored</div>
+                <div class="progress mt-2" style="height: 3px; background: rgba(0, 191, 255, 0.1);">
+                    <div class="progress-bar bg-info" style="width: 100%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="soc-glass-panel telemetry-card text-center p-3" id="statCardOnline">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <i class="bi bi-check-circle-fill fs-3 text-theme-success"></i>
+                    <span class="badge bg-success-opacity text-theme-success">ONLINE</span>
+                </div>
+                <h2 class="text-theme-success mb-0 font-monospace display-6 fw-bold" id="statOnlineHosts">{{ zabbix_data.available_hosts|default:"19" }}</h2>
+                <div class="small text-muted text-uppercase tracking-wider">Nominal Nodes</div>
+                <div class="progress mt-2" style="height: 3px; background: rgba(0, 255, 153, 0.1);">
+                    <div class="progress-bar bg-theme-success" id="onlineProgress" style="width: 82%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="soc-glass-panel telemetry-card text-center p-3" id="statCardOffline">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <i class="bi bi-x-circle-fill fs-3 text-danger"></i>
+                    <span class="badge bg-danger-opacity text-danger">OFFLINE</span>
+                </div>
+                <h2 class="text-danger mb-0 font-monospace display-6 fw-bold" id="statOfflineHosts">{{ zabbix_data.unavailable_hosts|default:"4" }}</h2>
+                <div class="small text-muted text-uppercase tracking-wider">Unreachable Nodes</div>
+                <div class="progress mt-2" style="height: 3px; background: rgba(255, 51, 102, 0.1);">
+                    <div class="progress-bar bg-danger" id="offlineProgress" style="width: 18%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="soc-glass-panel telemetry-card text-center p-3" id="statCardAlerts">
+                <div class="d-flex justify-content-between align-items-start mb-2">
+                    <i class="bi bi-exclamation-triangle-fill fs-3 text-warning"></i>
+                    <span class="badge bg-warning-opacity text-warning">ALERTS</span>
+                </div>
+                <h2 class="text-warning mb-0 font-monospace display-6 fw-bold" id="statAlerts">{{ zabbix_data.total_problems|default:"3" }}</h2>
+                <div class="small text-muted text-uppercase tracking-wider">Zabbix Risk Triggers</div>
+                <div class="progress mt-2" style="height: 3px; background: rgba(255, 170, 0, 0.1);">
+                    <div class="progress-bar bg-warning" id="alertsProgress" style="width: 15%"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- INTERACTIVE MAP & DETAIL PANEL SPLIT -->
+    <!-- ===================================================================== -->
+    <div class="row g-4 mb-4">
+        
+        <!-- Topology Visualization Panel -->
+        <div class="col-lg-8">
+            <div class="soc-glass-panel h-100 p-4 position-relative d-flex flex-column">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h4 class="text-theme-success mb-0 font-monospace tracking-wide">
+                        <i class="bi bi-diagram-3-fill"></i> ACTIVE TOPOLOGY NETWORK VIEW
+                    </h4>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-success btn-xs font-monospace" onclick="triggerManualSweep()">
+                            <i class="bi bi-radar"></i> INITIATE SECURITY SWEEP
+                        </button>
+                        <button class="btn btn-outline-secondary btn-xs font-monospace" onclick="resetMapTransforms()">
+                            <i class="bi bi-arrows-angle-contract"></i> RESET VIEW
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Radar overlay / Scanning beam -->
+                <div class="radar-scan-overlay" id="radarScanner">
+                    <div class="radar-sweep-beam"></div>
+                    <div class="radar-ripple ripple-1"></div>
+                    <div class="radar-ripple ripple-2"></div>
+                    <div class="radar-text font-monospace text-theme-success">SECURITY SWEEP RUNNING // MAPPED HOST EVALUATION IN PROGRESS...</div>
+                </div>
+
+                <!-- Topology Container Canvas -->
+                <div class="network-map-viewport" id="mapViewport">
+                    <div class="map-grid-overlay"></div>
+                    
+                    <div class="map-pan-zoom-container" id="mapPanContainer">
+                        
+                        <!-- SVG CONNECTIONS LAYER -->
+                        <svg class="network-svg-links" id="networkSvgLinks">
+                            <!-- Core layer links -->
+                            <path class="svg-link-path active-link" d="M 550,60 L 300,160" />
+                            <path class="svg-link-path active-link" d="M 550,60 L 450,160" />
+                            <path class="svg-link-path active-link" d="M 550,60 L 650,160" />
+                            <path class="svg-link-path active-link" d="M 550,60 L 800,160" />
+                            
+                            <!-- Distribution to switches links -->
+                            <path class="svg-link-path active-link" d="M 300,160 L 150,290" />
+                            <path class="svg-link-path active-link" d="M 450,160 L 400,290" />
+                            <path class="svg-link-path active-link" d="M 650,160 L 680,290" />
+                            <path class="svg-link-path active-link" d="M 800,160 L 920,290" />
+
+                            <!-- Access layer links (rendered dynamically or hardcoded) -->
+                            <line class="svg-link-path sub-link" x1="150" y1="290" x2="80" y2="400" />
+                            <line class="svg-link-path sub-link" x1="150" y1="290" x2="150" y2="400" />
+                            <line class="svg-link-path sub-link" x1="150" y1="290" x2="220" y2="400" />
+                            
+                            <line class="svg-link-path sub-link" x1="400" y1="290" x2="350" y2="400" />
+                            <line class="svg-link-path sub-link" x1="400" y1="290" x2="450" y2="400" />
+                            
+                            <line class="svg-link-path sub-link" x1="680" y1="290" x2="600" y2="400" />
+                            <line class="svg-link-path sub-link" x1="680" y1="290" x2="680" y2="400" />
+                            <line class="svg-link-path sub-link" x1="680" y1="290" x2="760" y2="400" />
+                            
+                            <line class="svg-link-path sub-link" x1="920" y1="290" x2="860" y2="400" />
+                            <line class="svg-link-path sub-link" x1="920" y1="290" x2="980" y2="400" />
+                        </svg>
+
+                        <!-- Moving Packet Simulations -->
+                        <div class="data-flow-animation">
+                            <span class="packet-dot dot-1" style="animation-delay: 0s;"></span>
+                            <span class="packet-dot dot-2" style="animation-delay: 1.5s;"></span>
+                            <span class="packet-dot dot-3" style="animation-delay: 0.8s;"></span>
+                            <span class="packet-dot dot-4" style="animation-delay: 2.2s;"></span>
+                        </div>
+
+                        <!-- ===== LAYER 3: CORE LAYER ===== -->
+                        <div class="topology-device-node core-node cursor-pointer" style="top: 30px; left: 500px;" id="node-CORE-ROUTER-01" onclick="selectNode('CORE-ROUTER-01')" data-status="online">
+                            <div class="node-pulse-ring"></div>
+                            <div class="device-icon-container"><i class="bi bi-router-fill"></i></div>
+                            <div class="device-label-text">CORE-ROUTER-01</div>
+                            <div class="device-ip-text">10.0.0.1</div>
+                        </div>
+
+                        <!-- ===== LAYER 2: DISTRIBUTION LAYER ===== -->
+                        <!-- Firewall -->
+                        <div class="topology-device-node dist-node cursor-pointer" style="top: 130px; left: 230px;" id="node-FIREWALL-01" onclick="selectNode('FIREWALL-01')" data-status="warning">
+                            <div class="node-pulse-ring"></div>
+                            <div class="device-icon-container text-warning"><i class="bi bi-shield-lock-fill"></i></div>
+                            <div class="device-label-text text-warning">FIREWALL-01</div>
+                            <div class="device-ip-text">192.168.1.254</div>
+                        </div>
+
+                        <!-- Load Balancer -->
+                        <div class="topology-device-node dist-node cursor-pointer" style="top: 130px; left: 380px;" id="node-LOAD-BALANCER" onclick="selectNode('LOAD-BALANCER')" data-status="online">
+                            <div class="node-pulse-ring"></div>
+                            <div class="device-icon-container"><i class="bi bi-arrow-left-right"></i></div>
+                            <div class="device-label-text">LOAD-BALANCER</div>
+                            <div class="device-ip-text">192.168.1.253</div>
+                        </div>
+
+                        <!-- Dist Switch 01 -->
+                        <div class="topology-device-node dist-node cursor-pointer" style="top: 130px; left: 580px;" id="node-DIST-SW-01" onclick="selectNode('DIST-SW-01')" data-status="online">
+                            <div class="node-pulse-ring"></div>
+                            <div class="device-icon-container"><i class="bi bi-hub"></i></div>
+                            <div class="device-label-text">DIST-SW-01</div>
+                            <div class="device-ip-text">192.168.1.2</div>
+                        </div>
+
+                        <!-- Dist Switch 02 -->
+                        <div class="topology-device-node dist-node cursor-pointer" style="top: 130px; left: 730px;" id="node-DIST-SW-02" onclick="selectNode('DIST-SW-02')" data-status="online">
+                            <div class="node-pulse-ring"></div>
+                            <div class="device-icon-container"><i class="bi bi-hub"></i></div>
+                            <div class="device-label-text">DIST-SW-02</div>
+                            <div class="device-ip-text">192.168.1.3</div>
+                        </div>
+
+                        <!-- ===== LAYER 1: ACCESS LAYER ===== -->
+                        <!-- Access Switch 01 -->
+                        <div class="topology-device-node access-node cursor-pointer" style="top: 260px; left: 100px;" id="node-ACC-SW-01" onclick="selectNode('ACC-SW-01')" data-status="online">
+                            <div class="node-pulse-ring"></div>
+                            <div class="device-icon-container"><i class="bi bi-hdd-stack-fill"></i></div>
+                            <div class="device-label-text">ACC-SW-01</div>
+                            <div class="device-ip-text">192.168.1.10</div>
+                        </div>
+
+                        <!-- Access Sw 1 hosts -->
+                        <div class="micro-endpoint pc cursor-pointer" style="top: 380px; left: 50px;" id="node-PC-01" onclick="selectNode('PC-01')" data-status="online">
+                            <i class="bi bi-pc-display"></i><span>PC-01</span>
+                        </div>
+                        <div class="micro-endpoint pc cursor-pointer" style="top: 380px; left: 120px;" id="node-PC-02" onclick="selectNode('PC-02')" data-status="online">
+                            <i class="bi bi-pc-display"></i><span>PC-02</span>
+                        </div>
+                        <div class="micro-endpoint pc cursor-pointer" style="top: 380px; left: 190px;" id="node-PC-03" onclick="selectNode('PC-03')" data-status="warning">
+                            <i class="bi bi-pc-display"></i><span>PC-03</span>
+                        </div>
+
+                        <!-- Access Switch 02 -->
+                        <div class="topology-device-node access-node cursor-pointer" style="top: 260px; left: 350px;" id="node-ACC-SW-02" onclick="selectNode('ACC-SW-02')" data-status="online">
+                            <div class="node-pulse-ring"></div>
+                            <div class="device-icon-container"><i class="bi bi-hdd-stack-fill"></i></div>
+                            <div class="device-label-text">ACC-SW-02</div>
+                            <div class="device-ip-text">192.168.1.11</div>
+                        </div>
+
+                        <!-- Access Sw 2 hosts -->
+                        <div class="micro-endpoint camera cursor-pointer" style="top: 380px; left: 320px;" id="node-CAM-01" onclick="selectNode('CAM-01')" data-status="online">
+                            <i class="bi bi-camera-video-fill"></i><span>CAM-01</span>
+                        </div>
+                        <div class="micro-endpoint camera cursor-pointer" style="top: 380px; left: 410px;" id="node-CAM-03" onclick="selectNode('CAM-03')" data-status="offline">
+                            <i class="bi bi-camera-video-fill"></i><span>CAM-03</span>
+                        </div>
+
+                        <!-- Server Switch -->
+                        <div class="topology-device-node access-node cursor-pointer" style="top: 260px; left: 630px;" id="node-SRV-SW-01" onclick="selectNode('SRV-SW-01')" data-status="online">
+                            <div class="node-pulse-ring"></div>
+                            <div class="device-icon-container"><i class="bi bi-hdd-stack-fill"></i></div>
+                            <div class="device-label-text">SRV-SW-01</div>
+                            <div class="device-ip-text">192.168.1.12</div>
+                        </div>
+
+                        <!-- Server Sw hosts -->
+                        <div class="micro-endpoint server cursor-pointer" style="top: 380px; left: 560px;" id="node-WEB-SRV" onclick="selectNode('WEB-SRV')" data-status="critical">
+                            <i class="bi bi-database-fill-exclamation text-danger"></i><span>WEB-SRV</span>
+                        </div>
+                        <div class="micro-endpoint server cursor-pointer" style="top: 380px; left: 640px;" id="node-DB-SRV" onclick="selectNode('DB-SRV')" data-status="online">
+                            <i class="bi bi-database-fill-check"></i><span>DB-SRV</span>
+                        </div>
+                        <div class="micro-endpoint server cursor-pointer" style="top: 380px; left: 720px;" id="node-STORAGE" onclick="selectNode('STORAGE')" data-status="online">
+                            <i class="bi bi-hdd-fill"></i><span>STORAGE</span>
+                        </div>
+
+                        <!-- WiFi AP Controller -->
+                        <div class="topology-device-node access-node cursor-pointer" style="top: 260px; left: 870px;" id="node-WIFI-CTRL" onclick="selectNode('WIFI-CTRL')" data-status="online">
+                            <div class="node-pulse-ring"></div>
+                            <div class="device-icon-container"><i class="bi bi-wifi"></i></div>
+                            <div class="device-label-text">WIFI-CTRL</div>
+                            <div class="device-ip-text">192.168.1.13</div>
+                        </div>
+
+                        <!-- Wifi hosts -->
+                        <div class="micro-endpoint wifi cursor-pointer" style="top: 380px; left: 830px;" id="node-AP-01" onclick="selectNode('AP-01')" data-status="online">
+                            <i class="bi bi-broadcast"></i><span>AP-01</span>
+                        </div>
+                        <div class="micro-endpoint wifi cursor-pointer" style="top: 380px; left: 930px;" id="node-AP-03" onclick="selectNode('AP-03')" data-status="warning">
+                            <i class="bi bi-broadcast text-warning"></i><span>AP-03</span>
+                        </div>
+
+                    </div>
+                </div>
+
+                <div class="mt-auto pt-3 text-muted small d-flex flex-wrap justify-content-between font-monospace border-top border-theme-dark-soft">
+                    <span><i class="bi bi-circle-fill text-theme-success me-1"></i> ACTIVE LAYERS: 3 (CORE, DIST, ACCESS)</span>
+                    <span><i class="bi bi-cpu"></i> DEEP INSPECTION ENHANCED</span>
+                    <span><i class="bi bi-arrow-repeat"></i> AUTO-REFRESH: 60S</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Node Details Info Panel (HUD Drawer) -->
+        <div class="col-lg-4">
+            <div class="soc-glass-panel h-100 p-4 d-flex flex-column position-relative" id="hostDetailPanel">
+                <div class="device-scanlines"></div>
+                <div id="noNodeSelectedView" class="text-center my-auto py-5">
+                    <i class="bi bi-cpu fs-1 text-muted-opacity mb-3 d-block pulse-slow"></i>
+                    <h5 class="text-muted tracking-widest font-monospace">SELECT A NETWORK NODE</h5>
+                    <p class="text-muted small px-3">Click on any device or link in the topology map to intercept telemetry, execute actions, and monitor load metrics in real-time.</p>
+                </div>
+
+                <div id="nodeSelectedView" class="d-none h-100 d-flex flex-column">
+                    <!-- Title info -->
+                    <div class="d-flex justify-content-between align-items-start border-bottom border-theme-dark-soft pb-3 mb-3">
+                        <div>
+                            <h4 class="text-theme-success font-monospace mb-1" id="detailHostName">CORE-ROUTER-01</h4>
+                            <span class="badge bg-theme-success-opacity text-theme-success font-monospace" id="detailHostIp">10.0.0.1</span>
+                            <span class="badge bg-black-opacity border-theme-dark-soft text-muted font-monospace ms-1" id="detailHostType">ROUTER</span>
+                        </div>
+                        <span class="badge text-black" id="detailHostStatusBadge">ONLINE</span>
+                    </div>
+
+                    <!-- Host specs -->
+                    <div class="row g-2 mb-3 font-monospace small">
+                        <div class="col-6">
+                            <span class="text-muted small block">MODEL/PLATFORM</span>
+                            <div class="fw-bold" id="detailHostModel">Cisco Nexus 9000</div>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted small block">MAC ADDRESS</span>
+                            <div class="fw-bold" id="detailHostMac">00:50:56:AB:12:CD</div>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted small block">SYSTEM UPTIME</span>
+                            <div class="fw-bold" id="detailHostUptime">92d 12h 30m</div>
+                        </div>
+                        <div class="col-6">
+                            <span class="text-muted small block">TEMP SENSOR</span>
+                            <div class="fw-bold" id="detailHostTemp">42°C</div>
+                        </div>
+                    </div>
+
+                    <!-- Circular Micro-Gauges (CPU/RAM) -->
+                    <div class="soc-glass-panel p-3 border-theme-dark-soft mb-3 bg-black-opacity">
+                        <h6 class="font-monospace text-theme-success small mb-3 uppercase tracking-wider">// REAL-TIME LOAD INDEX</h6>
+                        <div class="row">
+                            <div class="col-6 text-center">
+                                <div class="gauge-wrapper position-relative d-inline-block">
+                                    <svg width="90" height="90" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="42" stroke="rgba(26, 41, 61, 0.5)" stroke-width="8" fill="transparent" />
+                                        <circle class="gauge-progress-circle" id="cpuGaugeCircle" cx="50" cy="50" r="42" 
+                                                stroke="var(--soc-neon-green)" stroke-width="8" fill="transparent" 
+                                                stroke-dasharray="263.8" stroke-dashoffset="263.8" stroke-linecap="round" />
+                                        <text id="cpuGaugeText" x="50" y="56" text-anchor="middle" fill="#fff" font-size="18" class="font-monospace fw-bold">0%</text>
+                                    </svg>
+                                    <div class="small mt-1 text-muted font-monospace tracking-wide">CPU LOAD</div>
+                                </div>
+                            </div>
+                            <div class="col-6 text-center">
+                                <div class="gauge-wrapper position-relative d-inline-block">
+                                    <svg width="90" height="90" viewBox="0 0 100 100">
+                                        <circle cx="50" cy="50" r="42" stroke="rgba(26, 41, 61, 0.5)" stroke-width="8" fill="transparent" />
+                                        <circle class="gauge-progress-circle" id="ramGaugeCircle" cx="50" cy="50" r="42" 
+                                                stroke="var(--soc-neon-green)" stroke-width="8" fill="transparent" 
+                                                stroke-dasharray="263.8" stroke-dashoffset="263.8" stroke-linecap="round" />
+                                        <text id="ramGaugeText" x="50" y="56" text-anchor="middle" fill="#fff" font-size="18" class="font-monospace fw-bold">0%</text>
+                                    </svg>
+                                    <div class="small mt-1 text-muted font-monospace tracking-wide">RAM USAGE</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Port Services -->
+                    <div class="mb-3">
+                        <span class="text-muted small font-monospace block mb-1">// SECURITY PORT DISCOVERY</span>
+                        <div class="bg-black-opacity border-theme-dark-soft rounded overflow-hidden" style="max-height: 120px; overflow-y: auto;">
+                            <table class="table table-dark table-sm table-borderless font-monospace small mb-0">
+                                <tbody id="detailPortsBody">
+                                    <!-- Rendered dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Host actions & console -->
+                    <div class="mt-auto">
+                        <div class="d-flex gap-2 mb-2">
+                            <button class="btn btn-outline-info btn-xs flex-grow-1 font-monospace" onclick="simulateHostAction('PING')"><i class="bi bi-terminal"></i> PING</button>
+                            <button class="btn btn-outline-warning btn-xs flex-grow-1 font-monospace" onclick="simulateHostAction('SCAN')"><i class="bi bi-search"></i> PORT SCAN</button>
+                            <button class="btn btn-outline-danger btn-xs flex-grow-1 font-monospace" onclick="simulateHostAction('REBOOT')"><i class="bi bi-power"></i> REBOOT</button>
+                        </div>
+                        
+                        <!-- Mini terminal for command output -->
+                        <div class="mini-console-output font-monospace text-theme-success" id="miniConsole">
+                            SEC-OS HOST CONSOLE v1.02 // READY
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- ===================================================================== -->
+    <!-- LOG STREAM TERMINAL & ZABBIX ALERTS -->
+    <!-- ===================================================================== -->
+    <div class="row g-4">
+        
+        <!-- Tactical Log Console Ticker -->
+        <div class="col-md-6">
+            <div class="soc-glass-panel p-4 position-relative d-flex flex-column" style="min-height: 380px;">
+                <div class="device-scanlines"></div>
+                
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="text-theme-success mb-0 font-monospace tracking-widest uppercase">
+                        <i class="bi bi-terminal-fill"></i> TACTICAL INTEL STREAM FEED
+                    </h5>
+                    
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="text" class="form-control form-control-xs bg-black-opacity text-theme-success border-theme-dark-soft font-monospace" placeholder="Filter grep..." id="consoleSearchInput" style="max-width: 140px; font-size: 0.75rem;" oninput="applyConsoleFilter()">
+                        <button class="btn btn-outline-success btn-xs font-monospace" id="pausePlayBtn" onclick="toggleConsolePlay()"><i class="bi bi-pause-fill"></i> PAUSE</button>
+                        <button class="btn btn-outline-secondary btn-xs font-monospace" onclick="clearConsoleLog()"><i class="bi bi-trash"></i> CLEAR</button>
+                    </div>
+                </div>
+
+                <!-- Ticker Filter Tabs -->
+                <ul class="nav nav-pills nav-pills-xs border-theme-dark-soft mb-2 font-monospace" id="consoleFilterTabs">
+                    <li class="nav-item"><a href="#" class="nav-link active py-1" onclick="setConsoleFilter('ALL', event)">ALL</a></li>
+                    <li class="nav-item"><a href="#" class="nav-link py-1 text-danger" onclick="setConsoleFilter('THREAT', event)">THREATS</a></li>
+                    <li class="nav-item"><a href="#" class="nav-link py-1 text-info" onclick="setConsoleFilter('PACKET', event)">TRAFFIC</a></li>
+                    <li class="nav-item"><a href="#" class="nav-link py-1 text-theme-success" onclick="setConsoleFilter('SYSTEM', event)">SYSTEM</a></li>
+                </ul>
+
+                <!-- Ticker viewport -->
+                <div class="terminal-ticker-viewport" id="consoleTickerArea">
+                    <!-- Logs stream loaded via Javascript -->
+                </div>
+
+                <div class="mt-2 text-muted small font-monospace d-flex justify-content-between">
+                    <span id="logCountLabel">STREAMING IN REAL-TIME</span>
+                    <span class="cursor-pointer text-theme-success" onclick="simulateThreatAlert()">[FORCE_TEST_INTRUSION]</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recent Zabbix & Local Incident Logs -->
+        <div class="col-md-6">
+            <div class="soc-glass-panel p-4 d-flex flex-column" style="min-height: 380px;">
+                <h5 class="text-theme-success mb-3 font-monospace tracking-widest uppercase">
+                    <i class="bi bi-exclamation-octagon-fill"></i> DETECTED ALERTS / CORRELATED EVENTS
+                </h5>
+                
+                <div class="table-responsive flex-grow-1" style="max-height: 250px; overflow-y: auto;">
+                    <table class="table table-dark table-hover font-monospace table-borderless small align-middle">
+                        <thead class="border-bottom border-theme-dark-soft">
+                            <tr>
+                                <th class="text-muted py-2">TIME</th>
+                                <th class="text-muted py-2">ASSET</th>
+                                <th class="text-muted py-2">IDENTIFICATION</th>
+                                <th class="text-muted py-2">INCIDENT DESCRIPTION</th>
+                                <th class="text-muted py-2">RISK</th>
+                            </tr>
+                        </thead>
+                        <tbody id="incidentsTableBody">
+                            {% if zabbix_data.problems %}
+                                {% for problem in zabbix_data.problems %}
+                                <tr>
+                                    <td>{{ problem.clock_formatted|default:problem.clock }}</td>
+                                    <td><span class="badge bg-black-opacity border-theme-dark-soft text-muted">ZABBIX-NODE</span></td>
+                                    <td>N/A</td>
+                                    <td>{{ problem.name }}</td>
+                                    <td>
+                                        <span class="badge {% if problem.severity|add:"0" >= 4 %}bg-danger text-black{% elif problem.severity|add:"0" >= 2 %}bg-warning text-black{% else %}bg-info{% endif %}">
+                                            {% if problem.severity == "0" %}Not classified
+                                            {% elif problem.severity == "1" %}Information
+                                            {% elif problem.severity == "2" %}Warning
+                                            {% elif problem.severity == "3" %}Average
+                                            {% elif problem.severity == "4" %}High
+                                            {% elif problem.severity == "5" %}Disaster
+                                            {% else %}Alert
+                                            {% endif %}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% else %}
+                                <!-- Local fallback simulated incidents that look real -->
+                                <tr class="incident-row" data-severity="critical">
+                                    <td class="timestamp-cell">10:24:15</td>
+                                    <td>WEB-SRV</td>
+                                    <td>192.168.1.20</td>
+                                    <td>Apache CPU Overload Alert > 94%</td>
+                                    <td><span class="badge bg-danger text-black">CRITICAL</span></td>
+                                </tr>
+                                <tr class="incident-row" data-severity="warning">
+                                    <td class="timestamp-cell">10:18:45</td>
+                                    <td>FIREWALL-01</td>
+                                    <td>192.168.1.254</td>
+                                    <td>FortiGate State: Port Sweep Scan Detected</td>
+                                    <td><span class="badge bg-warning text-black">WARNING</span></td>
+                                </tr>
+                                <tr class="incident-row" data-severity="warning">
+                                    <td class="timestamp-cell">10:04:12</td>
+                                    <td>PC-03</td>
+                                    <td>192.168.1.103</td>
+                                    <td>Outbound network anomalies detected (port 5985)</td>
+                                    <td><span class="badge bg-warning text-black">WARNING</span></td>
+                                </tr>
+                                <tr class="incident-row" data-severity="info">
+                                    <td class="timestamp-cell">09:55:01</td>
+                                    <td>AP-03</td>
+                                    <td>192.168.1.122</td>
+                                    <td>High Client density (> 30 users connected)</td>
+                                    <td><span class="badge bg-info text-white">NOMINAL</span></td>
+                                </tr>
+                                <tr class="incident-row" data-severity="critical">
+                                    <td class="timestamp-cell">08:12:30</td>
+                                    <td>CAM-03</td>
+                                    <td>192.168.1.107</td>
+                                    <td>Offline status: Heartbeat timeout</td>
+                                    <td><span class="badge bg-danger text-black">CRITICAL</span></td>
+                                </tr>
+                            {% endif %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="row text-center mt-3 pt-3 border-top border-theme-dark-soft g-2 font-monospace text-uppercase small">
+                    <div class="col-4 border-end border-theme-dark-soft">
+                        <div class="text-muted small">Active Severity</div>
+                        <div class="text-danger fw-bold" id="criticalSummaryCount">2 CRITICAL</div>
+                    </div>
+                    <div class="col-4 border-end border-theme-dark-soft">
+                        <div class="text-muted small">Correlated Events</div>
+                        <div class="text-warning fw-bold" id="warningSummaryCount">3 WARNING</div>
+                    </div>
+                    <div class="col-4">
+                        <div class="text-muted small">Nominal Health</div>
+                        <div class="text-theme-success fw-bold">96.4% SYSTEM</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ===================================================================== -->
+<!-- GLITCHY & GLASSY PREMIUM TACTICAL STYLING -->
+<!-- ===================================================================== -->
+<style>
+/* Glassmorphic Tactical Panels */
+.soc-glass-panel {
+    background: rgba(9, 14, 21, 0.8) !important;
+    border: 2px solid var(--soc-thick-border) !important;
+    border-radius: 6px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.75) !important;
+    position: relative;
+    overflow: hidden;
+}
+
+.bg-info-opacity { background: rgba(0, 191, 255, 0.15) !important; }
+.bg-success-opacity { background: rgba(0, 255, 153, 0.15) !important; }
+.bg-danger-opacity { background: rgba(255, 51, 102, 0.15) !important; }
+.bg-warning-opacity { background: rgba(255, 170, 0, 0.15) !important; }
+.bg-black-opacity { background: rgba(0, 0, 0, 0.4) !important; }
+
+/* Hazard Stripes for headers */
+.hazard-stripe-bg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background: repeating-linear-gradient(90deg, 
+        var(--soc-neon-green), 
+        var(--soc-neon-green) 15px, 
+        #000 15px, 
+        #000 30px
+    );
+    z-index: 1;
+    transition: all 0.5s ease;
+}
+
+/* Vignette flashing frames for critical/warning states */
+.body-threat-vignette {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 99999;
+    box-shadow: inset 0 0 120px rgba(0, 0, 0, 0);
+    transition: box-shadow 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.body-threat-vignette.vignette-warning {
+    box-shadow: inset 0 0 100px rgba(255, 170, 0, 0.3);
+    animation: vignette-pulse 3s infinite;
+}
+.body-threat-vignette.vignette-critical {
+    box-shadow: inset 0 0 120px rgba(255, 51, 102, 0.4);
+    animation: vignette-pulse-fast 1s infinite alternate;
+}
+
+@keyframes vignette-pulse {
+    0% { opacity: 0.7; }
+    50% { opacity: 1.0; }
+    100% { opacity: 0.7; }
+}
+@keyframes vignette-pulse-fast {
+    0% { opacity: 0.6; box-shadow: inset 0 0 80px rgba(255, 51, 102, 0.35); }
+    100% { opacity: 1.0; box-shadow: inset 0 0 130px rgba(255, 51, 102, 0.55); }
+}
+
+/* Interactive Network Map Viewport */
+.network-map-viewport {
+    background: radial-gradient(circle at center, #070c14 0%, #03060a 100%);
+    border: 1px solid var(--soc-thick-border);
+    border-radius: 4px;
+    height: 480px;
+    position: relative;
+    overflow: hidden;
+    user-select: none;
+}
+
+.map-grid-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: 
+        linear-gradient(rgba(0, 255, 153, 0.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 255, 153, 0.015) 1px, transparent 1px);
+    background-size: 25px 25px;
+    pointer-events: none;
+    z-index: 0;
+}
+
+.map-pan-zoom-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    transform-origin: 0 0;
+    z-index: 1;
+}
+
+/* Device Scanlines */
+.device-scanlines {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(
+        rgba(18, 16, 16, 0) 50%, 
+        rgba(0, 0, 0, 0.15) 50%
+    );
+    background-size: 100% 4px;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0.45;
+}
+
+/* Radar scanner sweeps */
+.radar-scan-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(4, 7, 10, 0.85);
+    z-index: 99;
+    display: none;
+    pointer-events: all;
+    overflow: hidden;
+}
+
+.radar-sweep-beam {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 200%;
+    height: 100%;
+    background: linear-gradient(90deg, 
+        transparent 0%, 
+        rgba(0, 255, 153, 0.05) 45%, 
+        rgba(0, 255, 153, 0.25) 50%, 
+        rgba(0, 255, 153, 0.05) 55%, 
+        transparent 100%
+    );
+    transform: rotate(45deg);
+    animation: radar-sweep 4s infinite linear;
+}
+
+.radar-ripple {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    border: 2px solid rgba(0, 255, 153, 0.3);
+    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    transform: translate(-50%, -50%);
+    pointer-events: none;
+}
+.radar-ripple.ripple-1 {
+    animation: radar-grow-ripple 3s infinite cubic-bezier(0.1, 0.8, 0.3, 1);
+}
+.radar-ripple.ripple-2 {
+    animation: radar-grow-ripple 3s infinite cubic-bezier(0.1, 0.8, 0.3, 1);
+    animation-delay: 1.5s;
+}
+
+.radar-text {
+    position: absolute;
+    bottom: 30px;
+    width: 100%;
+    text-align: center;
+    font-size: 0.9rem;
+    letter-spacing: 2px;
+    text-shadow: 0 0 10px var(--soc-neon-shadow);
+    animation: text-pulse 1.5s infinite;
+}
+
+@keyframes radar-sweep {
+    0% { transform: translate(-30%, -30%) rotate(0deg); }
+    100% { transform: translate(-30%, -30%) rotate(360deg); }
+}
+@keyframes radar-grow-ripple {
+    0% { width: 10px; height: 10px; opacity: 1; }
+    100% { width: 600px; height: 600px; opacity: 0; }
+}
+
+/* SVG Connection Lines */
+.network-svg-links {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.svg-link-path {
+    fill: none;
+    stroke: rgba(26, 41, 61, 0.55);
+    stroke-width: 2;
+    transition: all 0.5s ease;
+}
+
+.svg-link-path.active-link {
+    stroke: var(--soc-thick-border);
+    stroke-width: 2.5;
+}
+
+.svg-link-path.sub-link {
+    stroke: rgba(26, 41, 61, 0.35);
+    stroke-dasharray: 4, 4;
+}
+
+/* Moving Packet Animations */
+.data-flow-animation {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.packet-dot {
+    position: absolute;
+    width: 6px;
+    height: 6px;
+    background: var(--soc-neon-green);
+    border-radius: 50%;
+    box-shadow: 0 0 8px var(--soc-neon-green);
+    opacity: 0;
+}
+
+/* Animated packets along predefined absolute coordinates */
+.packet-dot.dot-1 {
+    animation: packet-path-1 6s infinite linear;
+}
+.packet-dot.dot-2 {
+    animation: packet-path-2 7s infinite linear;
+}
+.packet-dot.dot-3 {
+    animation: packet-path-3 5s infinite linear;
+}
+.packet-dot.dot-4 {
+    animation: packet-path-4 8s infinite linear;
+}
+
+@keyframes packet-path-1 {
+    0% { top: 60px; left: 550px; opacity: 0; }
+    10% { opacity: 1; }
+    40% { top: 160px; left: 300px; }
+    70% { top: 290px; left: 150px; }
+    95% { top: 400px; left: 190px; opacity: 1; }
+    100% { top: 400px; left: 190px; opacity: 0; }
+}
+
+@keyframes packet-path-2 {
+    0% { top: 60px; left: 550px; opacity: 0; }
+    10% { opacity: 1; }
+    50% { top: 160px; left: 800px; }
+    85% { top: 290px; left: 920px; }
+    97% { top: 380px; left: 930px; opacity: 1; }
+    100% { top: 380px; left: 930px; opacity: 0; }
+}
+
+@keyframes packet-path-3 {
+    0% { top: 60px; left: 550px; opacity: 0; }
+    10% { opacity: 1; }
+    45% { top: 160px; left: 650px; }
+    75% { top: 290px; left: 680px; }
+    95% { top: 380px; left: 560px; opacity: 1; }
+    100% { top: 380px; left: 560px; opacity: 0; }
+}
+
+@keyframes packet-path-4 {
+    0% { top: 160px; left: 300px; opacity: 0; }
+    10% { opacity: 1; }
+    60% { top: 290px; left: 150px; }
+    95% { top: 380px; left: 50px; opacity: 1; }
+    100% { top: 380px; left: 50px; opacity: 0; }
+}
+
+/* Topology Nodes styling */
+.topology-device-node {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: rgba(9, 14, 21, 0.95);
+    border: 2px solid var(--soc-thick-border);
+    border-radius: 50%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 10;
+}
+
+.topology-device-node:hover {
+    border-color: var(--soc-neon-green);
+    box-shadow: 0 0 15px var(--soc-neon-shadow);
+    transform: scale(1.15);
+}
+
+.topology-device-node.selected-node {
+    border-color: var(--soc-neon-green);
+    box-shadow: 0 0 25px var(--soc-neon-shadow);
+    background: rgba(0, 255, 153, 0.1);
+}
+
+/* Status pulses */
+.node-pulse-ring {
+    position: absolute;
+    top: -4px;
+    left: -4px;
+    right: -4px;
+    bottom: -4px;
+    border: 1.5px solid var(--soc-neon-green);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.topology-device-node[data-status="online"] .node-pulse-ring {
+    animation: ring-pulse 3s infinite ease-out;
+}
+.topology-device-node[data-status="warning"] {
+    border-color: var(--soc-neon-warning);
+}
+.topology-device-node[data-status="warning"] .node-pulse-ring {
+    border-color: var(--soc-neon-warning);
+    animation: ring-pulse-warning 2s infinite ease-out;
+}
+.topology-device-node[data-status="critical"] {
+    border-color: var(--soc-neon-danger);
+}
+.topology-device-node[data-status="critical"] .node-pulse-ring {
+    border-color: var(--soc-neon-danger);
+    animation: ring-pulse-critical 1s infinite ease-out;
+}
+.topology-device-node[data-status="offline"] {
+    border-color: #555;
+    opacity: 0.55;
+}
+
+@keyframes ring-pulse {
+    0% { transform: scale(0.95); opacity: 0.8; }
+    100% { transform: scale(1.45); opacity: 0; }
+}
+@keyframes ring-pulse-warning {
+    0% { transform: scale(0.95); opacity: 0.8; }
+    50% { opacity: 0.9; }
+    100% { transform: scale(1.55); opacity: 0; }
+}
+@keyframes ring-pulse-critical {
+    0% { transform: scale(0.95); opacity: 0.9; }
+    100% { transform: scale(1.65); opacity: 0; }
+}
+
+.device-icon-container {
+    font-size: 1.5rem;
+    color: var(--soc-neon-green);
+    line-height: 1;
+}
+
+.topology-device-node[data-status="warning"] .device-icon-container {
+    color: var(--soc-neon-warning);
+}
+.topology-device-node[data-status="critical"] .device-icon-container {
+    color: var(--soc-neon-danger);
+}
+.topology-device-node[data-status="offline"] .device-icon-container {
+    color: #666;
+}
+
+.device-label-text {
+    position: absolute;
+    top: 62px;
+    font-size: 0.65rem;
+    font-family: monospace;
+    font-weight: bold;
+    color: #fff;
+    white-space: nowrap;
+    text-shadow: 0 2px 4px #000;
+}
+
+.device-ip-text {
+    position: absolute;
+    top: 75px;
+    font-size: 0.55rem;
+    font-family: monospace;
+    color: var(--soc-text-dimmed);
+    white-space: nowrap;
+    text-shadow: 0 1px 3px #000;
+}
+
+/* Micro Access Endpoints (Smaller node buttons) */
+.micro-endpoint {
+    position: absolute;
+    background: rgba(9, 14, 21, 0.95);
+    border: 1px solid var(--soc-thick-border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 0.6rem;
+    font-family: monospace;
+    color: var(--soc-text-dimmed);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    z-index: 10;
+    transition: all 0.2s ease;
+}
+
+.micro-endpoint:hover {
+    border-color: var(--soc-neon-green);
+    color: #fff;
+    transform: translateY(-2px);
+    box-shadow: 0 0 10px var(--soc-neon-shadow);
+}
+
+.micro-endpoint.selected-node {
+    border-color: var(--soc-neon-green);
+    background: rgba(0, 255, 153, 0.1);
+    color: #fff;
+}
+
+.micro-endpoint[data-status="warning"] {
+    border-color: var(--soc-neon-warning);
+}
+.micro-endpoint[data-status="critical"] {
+    border-color: var(--soc-neon-danger);
+    animation: node-danger-flash 1s infinite alternate;
+}
+.micro-endpoint[data-status="offline"] {
+    opacity: 0.5;
+    border-color: #444;
+}
+
+@keyframes node-danger-flash {
+    0% { box-shadow: 0 0 2px rgba(255, 51, 102, 0.3); }
+    100% { box-shadow: 0 0 10px rgba(255, 51, 102, 0.8); }
+}
+
+/* SVG Circular Gauges */
+.gauge-progress-circle {
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.16, 1, 0.3, 1), stroke 0.5s ease;
+    filter: drop-shadow(0 0 4px rgba(0, 255, 153, 0.3));
+}
+
+/* Mini Console inside drawer */
+.mini-console-output {
+    background: #030609;
+    border: 1px solid var(--soc-thick-border);
+    height: 100px;
+    border-radius: 3px;
+    padding: 8px;
+    font-size: 0.65rem;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    line-height: 1.4;
+    text-shadow: 0 0 2px rgba(0, 255, 153, 0.4);
+}
+
+/* Equalizer waves */
+.equalizer-container {
+    height: 20px;
+    align-items: flex-end;
+}
+.eq-bar {
+    width: 2px;
+    height: 2px;
+    background-color: var(--soc-neon-green);
+    transition: height 0.15s ease;
+}
+
+.equalizer-active .eq-bar:nth-child(1) { animation: bounce-eq 0.6s infinite alternate; }
+.equalizer-active .eq-bar:nth-child(2) { animation: bounce-eq 0.4s infinite alternate 0.1s; }
+.equalizer-active .eq-bar:nth-child(3) { animation: bounce-eq 0.8s infinite alternate 0.2s; }
+.equalizer-active .eq-bar:nth-child(4) { animation: bounce-eq 0.5s infinite alternate 0.15s; }
+.equalizer-active .eq-bar:nth-child(5) { animation: bounce-eq 0.7s infinite alternate 0.05s; }
+
+@keyframes bounce-eq {
+    0% { height: 2px; }
+    100% { height: 18px; }
+}
+
+/* Live Terminal Log Stream */
+.terminal-ticker-viewport {
+    background: #020406;
+    border: 1px solid var(--soc-thick-border);
+    flex-grow: 1;
+    border-radius: 4px;
+    padding: 12px;
+    font-family: 'Consolas', monospace;
+    font-size: 0.75rem;
+    overflow-y: auto;
+    max-height: 240px;
+    min-height: 200px;
+    line-height: 1.5;
+    position: relative;
+}
+
+.terminal-line {
+    margin-bottom: 4px;
+    word-break: break-all;
+    border-left: 2px solid transparent;
+    padding-left: 6px;
+    opacity: 0.9;
+}
+
+.terminal-line.threat-log {
+    color: var(--soc-neon-danger);
+    border-left-color: var(--soc-neon-danger);
+    background: rgba(255, 51, 102, 0.05);
+}
+
+.terminal-line.warning-log {
+    color: var(--soc-neon-warning);
+    border-left-color: var(--soc-neon-warning);
+    background: rgba(255, 170, 0, 0.05);
+}
+
+.terminal-line.packet-log {
+    color: #00d2ff;
+    border-left-color: #00d2ff;
+}
+
+.terminal-line.system-log {
+    color: var(--soc-neon-green);
+    border-left-color: var(--soc-neon-green);
+}
+
+/* Telemetry Card hover glow effect */
+.telemetry-card {
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.telemetry-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.8) !important;
+}
+#statCardTotal:hover { border-color: #00bfff !important; box-shadow: 0 0 15px rgba(0, 191, 255, 0.25) !important; }
+#statCardOnline:hover { border-color: var(--soc-neon-green) !important; box-shadow: 0 0 15px var(--soc-neon-shadow) !important; }
+#statCardOffline:hover { border-color: var(--soc-neon-danger) !important; box-shadow: 0 0 15px rgba(255, 51, 102, 0.25) !important; }
+#statCardAlerts:hover { border-color: var(--soc-neon-warning) !important; box-shadow: 0 0 15px rgba(255, 170, 0, 0.25) !important; }
+
+/* Custom extra-small buttons */
+.btn-xs {
+    padding: 2px 8px !important;
+    font-size: 0.7rem !important;
+    border-radius: 3px !important;
+}
+
+.btn-group-sm .btn {
+    padding: 3px 8px !important;
+    font-size: 0.75rem !important;
+}
+
+/* Incident rows animation */
+.incident-row {
+    transition: background-color 0.2s ease;
+    border-bottom: 1px solid rgba(26, 41, 61, 0.3) !important;
+}
+.incident-row:hover {
+    background-color: rgba(26, 41, 61, 0.25) !important;
+}
+</style>
+
+<!-- ===================================================================== -->
+<!-- INTERACTIVE HUD CONTROLLER & WAVEFORM GENERATOR -->
+<!-- ===================================================================== -->
+<script>
+// Load dynamic Zabbix context mapping variables
+let zabbixTotalHosts = parseInt("{{ zabbix_data.total_hosts|default:23 }}");
+let zabbixOnlineHosts = parseInt("{{ zabbix_data.available_hosts|default:19 }}");
+let zabbixOfflineHosts = parseInt("{{ zabbix_data.unavailable_hosts|default:4 }}");
+let zabbixAlertsCount = parseInt("{{ zabbix_data.total_problems|default:3 }}");
+
+// Setup core states
+let currentThreatLevel = 'NORMAL';
+let isAudioMuted = true;
+let isConsolePlaying = true;
+let activeSelectedNode = null;
+let currentConsoleFilter = 'ALL';
+let consoleLogDatabase = [];
+let audioContext = null;
+let soundTimer = null;
+
+// Node catalogue mapping local assets to metrics
+const fallbackCatalog = {
+    "CORE-ROUTER-01": { ip: "10.0.0.1", type: "ROUTER", model: "Cisco Nexus 9000", status: "online", uptime: "92d 12h", cpu: 32, ram: 45, temp: "42°C", ports: [{p:22, s:"SSH", st:"OPEN"}, {p:179, s:"BGP", st:"OPEN"}, {p:443, s:"HTTPS", st:"OPEN"}], mac: "00:50:56:AB:12:CD" },
+    "FIREWALL-01": { ip: "192.168.1.254", type: "FIREWALL", model: "Fortigate 100F", status: "warning", uptime: "45d 6h", cpu: 78, ram: 55, temp: "58°C", ports: [{p:22, s:"SSH", st:"OPEN"}, {p:80, s:"HTTP", st:"FILTERED"}, {p:443, s:"HTTPS", st:"OPEN"}, {p:5060, s:"SIP", st:"CLOSED"}], mac: "00:50:56:DF:88:AA" },
+    "LOAD-BALANCER": { ip: "192.168.1.253", type: "LOAD_BALANCER", model: "F5 BIG-IP", status: "online", uptime: "14d 2h", cpu: 22, ram: 40, temp: "38°C", ports: [{p:80, s:"HTTP", st:"OPEN"}, {p:443, s:"HTTPS", st:"OPEN"}], mac: "00:50:56:CF:99:BB" },
+    "DIST-SW-01": { ip: "192.168.1.2", type: "SWITCH", model: "Catalyst 9300", status: "online", uptime: "201d 5h", cpu: 15, ram: 30, temp: "35°C", ports: [{p:22, s:"SSH", st:"OPEN"}, {p:161, s:"SNMP", st:"OPEN"}], mac: "00:50:56:11:22:33" },
+    "DIST-SW-02": { ip: "192.168.1.3", type: "SWITCH", model: "Catalyst 9300", status: "online", uptime: "201d 5h", cpu: 18, ram: 32, temp: "36°C", ports: [{p:22, s:"SSH", st:"OPEN"}, {p:161, s:"SNMP", st:"OPEN"}], mac: "00:50:56:11:22:34" },
+    "ACC-SW-01": { ip: "192.168.1.10", type: "SWITCH", model: "Catalyst 2960X", status: "online", uptime: "12d 8h", cpu: 10, ram: 25, temp: "34°C", ports: [{p:22, s:"SSH", st:"OPEN"}], mac: "00:50:56:AA:BB:CC" },
+    "ACC-SW-02": { ip: "192.168.1.11", type: "SWITCH", model: "Catalyst 2960X", status: "online", uptime: "12d 8h", cpu: 12, ram: 24, temp: "33°C", ports: [{p:22, s:"SSH", st:"OPEN"}], mac: "00:50:56:AA:BB:CD" },
+    "SRV-SW-01": { ip: "192.168.1.12", type: "SWITCH", model: "Catalyst 3850", status: "online", uptime: "54d 3h", cpu: 20, ram: 35, temp: "39°C", ports: [{p:22, s:"SSH", st:"OPEN"}, {p:161, s:"SNMP", st:"OPEN"}], mac: "00:50:56:AA:BB:CE" },
+    "WIFI-CTRL": { ip: "192.168.1.13", type: "WIRELESS_CTRL", model: "Cisco 3504", status: "online", uptime: "54d 3h", cpu: 25, ram: 42, temp: "41°C", ports: [{p:22, s:"SSH", st:"OPEN"}, {p:80, s:"HTTP", st:"CLOSED"}, {p:443, s:"HTTPS", st:"OPEN"}], mac: "00:50:56:AA:BB:CF" },
+    "WEB-SRV": { ip: "192.168.1.20", type: "SERVER", model: "Ubuntu Server 22.04", status: "critical", uptime: "124d 18h", cpu: 94, ram: 87, temp: "78°C", ports: [{p:80, s:"HTTP", st:"OPEN"}, {p:443, s:"HTTPS", st:"OPEN"}, {p:8080, s:"ZABBIX", st:"OPEN"}], mac: "00:50:56:B3:44:55" },
+    "DB-SRV": { ip: "192.168.1.21", type: "SERVER", model: "RedHat Enterprise 9", status: "online", uptime: "124d 18h", cpu: 34, ram: 68, temp: "45°C", ports: [{p:3306, s:"MYSQL", st:"OPEN"}], mac: "00:50:56:B3:44:56" },
+    "STORAGE": { ip: "192.168.1.22", type: "STORAGE_NAS", model: "Synology Enterprise", status: "online", uptime: "124d 18h", cpu: 18, ram: 35, temp: "37°C", ports: [{p:2049, s:"NFS", st:"OPEN"}, {p:3260, s:"ISCSI", st:"CLOSED"}, {p:5000, s:"DSM", st:"OPEN"}], mac: "00:50:56:B3:44:57" },
+    "PC-01": { ip: "192.168.1.101", type: "WORKSTATION", model: "Dell Optiplex", status: "online", uptime: "5d 1h", cpu: 12, ram: 34, temp: "31°C", ports: [{p:135, s:"RPC", st:"OPEN"}, {p:445, s:"SMB", st:"FILTERED"}, {p:3389, s:"RDP", st:"CLOSED"}], mac: "00:50:56:C1:22:01" },
+    "PC-02": { ip: "192.168.1.102", type: "WORKSTATION", model: "Dell Optiplex", status: "online", uptime: "2d 4h", cpu: 45, ram: 67, temp: "35°C", ports: [{p:135, s:"RPC", st:"OPEN"}, {p:445, s:"SMB", st:"CLOSED"}], mac: "00:50:56:C1:22:02" },
+    "PC-03": { ip: "192.168.1.103", type: "WORKSTATION", model: "Lenovo ThinkCentre", status: "warning", uptime: "4d 8h", cpu: 82, ram: 45, temp: "48°C", ports: [{p:135, s:"RPC", st:"OPEN"}, {p:445, s:"SMB", st:"OPEN"}, {p:5985, s:"WINRM", st:"OPEN"}], mac: "00:50:56:C1:22:03" },
+    "CAM-01": { ip: "192.168.1.105", type: "IP_CAMERA", model: "Hikvision Dome", status: "online", uptime: "30d 15h", cpu: 8, ram: 12, temp: "30°C", ports: [{p:554, s:"RTSP", st:"OPEN"}, {p:80, s:"HTTP", st:"OPEN"}], mac: "00:50:56:D1:33:01" },
+    "CAM-03": { ip: "192.168.1.107", type: "IP_CAMERA", model: "Hikvision Dome", status: "offline", uptime: "0d", cpu: 0, ram: 0, temp: "0°C", ports: [], mac: "00:50:56:D1:33:03" },
+    "AP-01": { ip: "192.168.1.120", type: "ACCESS_POINT", model: "Cisco Aironet", status: "online", uptime: "14d 6h", cpu: 14, ram: 28, temp: "34°C", ports: [{p:80, s:"HTTP", st:"CLOSED"}, {p:443, s:"HTTPS", st:"OPEN"}], mac: "00:50:56:E1:44:01" },
+    "AP-03": { ip: "192.168.1.122", type: "ACCESS_POINT", model: "Cisco Aironet", status: "warning", uptime: "14d 6h", cpu: 45, ram: 58, temp: "39°C", ports: [{p:80, s:"HTTP", st:"CLOSED"}, {p:443, s:"HTTPS", st:"OPEN"}], mac: "00:50:56:E1:44:03" }
+};
+
+// Log Templates for live console log ticker simulation
+const logTemplates = [
+    { type: 'SYSTEM', msg: "CORE_NET: Port check routing table nominal. Route metrics cached." },
+    { type: 'PACKET', msg: "192.168.1.102 -> 192.168.1.253: TCP connection established on port 443. SSL Handshake OK." },
+    { type: 'SYSTEM', msg: "DB-SRV: Replication state synced. Master status log LSN: 9481284." },
+    { type: 'PACKET', msg: "10.0.0.1 -> 192.168.1.254: Border routing BGP update propagated successfully." },
+    { type: 'WARNING', msg: "FIREWALL-01: Multiple rejected packets on port 23 (Telnet) from external range 45.12.93.0/24" },
+    { type: 'PACKET', msg: "192.168.1.20 -> 192.168.1.22: Storage sync cluster write: 12.4 MB/s throughput." },
+    { type: 'SYSTEM', msg: "WIFI-CTRL: DHCP dynamic allocation lease extended for CAM-02." },
+    { type: 'WARNING', msg: "PC-03: Suspicious DNS lookup request to unresolved dynamic TLD 'x7z-cybercmd.ru'" },
+    { type: 'SYSTEM', msg: "NETWATCH: Keep-alive heartbeat received from core router. RTT: 2.15 ms." },
+    { type: 'PACKET', msg: "AP-01 -> WIFI-CTRL: Wireless authentication frame: Client 'Android-7f' verified (WPA3)." }
+];
+
+const threatWarningLogs = [
+    { type: 'WARNING', msg: "SEC-OPS: Lateral movement indicator score elevated on segment ACCESS-L1." },
+    { type: 'WARNING', msg: "FORTIGATE: Automated IPS rule triggered: Port Scan Attempt detected on host 192.168.1.254." },
+    { type: 'WARNING', msg: "CORE-IDS: Heuristics alert: Abnormal spikes in SMB packet structure from PC-03." },
+    { type: 'WARNING', msg: "ZABBIX-MONITOR: CPU load warning limit reached on Firewall-01 (78%)." }
+];
+
+const threatCriticalLogs = [
+    { type: 'THREAT', msg: "[CRITICAL_ALARM] WEB-SRV: Unauthorized file modification detected in /var/www/html/!" },
+    { type: 'THREAT', msg: "[CRITICAL_ALARM] DB-SRV: Bruteforce login attempts exceeded threshold. Access lock active." },
+    { type: 'THREAT', msg: "[CRITICAL_ALARM] FIREWALL-01: DDOS signature detected! ICMP flooding from external assets." },
+    { type: 'THREAT', msg: "[CRITICAL_ALARM] PC-03: Local privilege escalation command sequence detected on host terminal!" },
+    { type: 'THREAT', msg: "[CRITICAL_ALARM] SECURITY_CORE: Active threat vector signature match! Malware callback confirmed." }
+];
+
+// Initialize live ticker logs
+function setupConsoleTicker() {
+    // Generate initial logs
+    for (let i = 0; i < 25; i++) {
+        let initialLog = logTemplates[Math.floor(Math.random() * logTemplates.length)];
+        let time = getFormattedTimeOffset(i * 12);
+        consoleLogDatabase.push({
+            time: time,
+            type: initialLog.type,
+            msg: initialLog.msg
+        });
+    }
+    renderLogsToViewport();
+}
+
+function getFormattedTimeOffset(secondsAgo) {
+    let date = new Date(Date.now() - secondsAgo * 1000);
+    return formatTime(date);
+}
+
+function formatTime(date) {
+    let h = String(date.getUTCHours()).padStart(2, '0');
+    let m = String(date.getUTCMinutes()).padStart(2, '0');
+    let s = String(date.getUTCSeconds()).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+}
+
+// Clock updates
+setInterval(() => {
+    document.getElementById('liveClock').textContent = formatTime(new Date());
+}, 1000);
+
+// Rendering console logs based on filter & search query
+function renderLogsToViewport() {
+    const area = document.getElementById('consoleTickerArea');
+    if (!area) return;
+    
+    let filteredLogs = consoleLogDatabase;
+    
+    // Apply type filter
+    if (currentConsoleFilter !== 'ALL') {
+        filteredLogs = consoleLogDatabase.filter(log => log.type === currentConsoleFilter);
+    }
+    
+    // Apply search filter
+    const query = document.getElementById('consoleSearchInput').value.trim().toLowerCase();
+    if (query) {
+        filteredLogs = filteredLogs.filter(log => log.msg.toLowerCase().includes(query) || log.time.includes(query));
+    }
+    
+    area.innerHTML = '';
+    
+    filteredLogs.forEach(log => {
+        let lineClass = 'terminal-line ';
+        if (log.type === 'THREAT') lineClass += 'threat-log';
+        else if (log.type === 'WARNING') lineClass += 'warning-log';
+        else if (log.type === 'PACKET') lineClass += 'packet-log';
+        else lineClass += 'system-log';
+        
+        area.innerHTML += `<div class="${lineClass}">[${log.time}] [${log.type}] ${escapeHtml(log.msg)}</div>`;
+    });
+    
+    // Auto scroll to bottom
+    area.scrollTop = area.scrollHeight;
+    
+    // Update count label
+    document.getElementById('logCountLabel').textContent = `SHOWING ${filteredLogs.length} LOGS // FILT: ${currentConsoleFilter}`;
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Filter tabs logic
+function setConsoleFilter(filter, event) {
+    if (event) event.preventDefault();
+    currentConsoleFilter = filter;
+    
+    // Update active class in tabs
+    const tabs = document.querySelectorAll('#consoleFilterTabs .nav-link');
+    tabs.forEach(tab => {
+        if (tab.textContent === filter || (filter === 'THREAT' && tab.textContent === 'THREATS') || (filter === 'PACKET' && tab.textContent === 'TRAFFIC')) {
+            tab.classList.add('active');
+        } else {
+            tab.classList.remove('active');
+        }
+    });
+    
+    playBeep(800, 0.05, 30);
+    renderLogsToViewport();
+}
+
+function applyConsoleFilter() {
+    renderLogsToViewport();
+}
+
+function toggleConsolePlay() {
+    isConsolePlaying = !isConsolePlaying;
+    const btn = document.getElementById('pausePlayBtn');
+    if (isConsolePlaying) {
+        btn.innerHTML = '<i class="bi bi-pause-fill"></i> PAUSE';
+        btn.className = 'btn btn-outline-success btn-xs font-monospace';
+    } else {
+        btn.innerHTML = '<i class="bi bi-play-fill"></i> RESUME';
+        btn.className = 'btn btn-success btn-xs font-monospace';
+    }
+    playBeep(900, 0.05, 30);
+}
+
+function clearConsoleLog() {
+    consoleLogDatabase = [];
+    playBeep(500, 0.08, 50);
+    renderLogsToViewport();
+}
+
+// Periodic dynamic log generation
+setInterval(() => {
+    if (!isConsolePlaying) return;
+    
+    let logPool = logTemplates;
+    if (currentThreatLevel === 'WARNING') {
+        logPool = logTemplates.concat(threatWarningLogs);
+    } else if (currentThreatLevel === 'CRITICAL') {
+        logPool = threatCriticalLogs.concat(threatWarningLogs);
+    }
+    
+    let randomLog = logPool[Math.floor(Math.random() * logPool.length)];
+    consoleLogDatabase.push({
+        time: formatTime(new Date()),
+        type: randomLog.type,
+        msg: randomLog.msg
+    });
+    
+    // Cap database size
+    if (consoleLogDatabase.length > 100) {
+        consoleLogDatabase.shift();
+    }
+    
+    renderLogsToViewport();
+    
+    // Play alert sound trigger if critical
+    if (randomLog.type === 'THREAT' && !isAudioMuted) {
+        triggerTacticalTone(523.25, 0.2); // play high C warning chime
+    }
+}, 2200);
+
+// Audio alarm synthesizer logic (Web Audio API)
+function toggleAudioAlarm() {
+    isAudioMuted = !isAudioMuted;
+    const btn = document.getElementById('audioToggleBtn');
+    const icon = document.getElementById('audioIcon');
+    const eq = document.getElementById('eqContainer');
+    
+    if (!audioContext) {
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    
+    if (!isAudioMuted) {
+        btn.innerHTML = '<i class="bi bi-volume-up-fill" id="audioIcon"></i> SOUND ON';
+        btn.classList.add('btn-success');
+        btn.classList.remove('btn-outline-success');
+        eq.classList.add('equalizer-active');
+        
+        // play confirmation tone
+        triggerTacticalTone(1000, 0.1);
+        setTimeout(() => triggerTacticalTone(1300, 0.1), 100);
+        
+        // Start alarm sound cycle if alert levels are warning/critical
+        startAlarmTimer();
+    } else {
+        btn.innerHTML = '<i class="bi bi-volume-mute-fill" id="audioIcon"></i> SOUND OFF';
+        btn.classList.remove('btn-success');
+        btn.classList.add('btn-outline-success');
+        eq.classList.remove('equalizer-active');
+        stopAlarmTimer();
+    }
+}
+
+function triggerTacticalTone(freq, duration) {
+    if (isAudioMuted || !audioContext) return;
+    
+    try {
+        if (audioContext.state === 'suspended') {
+            audioContext.resume();
+        }
+        
+        let osc = audioContext.createOscillator();
+        let gain = audioContext.createGain();
+        
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+        
+        gain.gain.setValueAtTime(0.06, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+        
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        osc.start();
+        osc.stop(audioContext.currentTime + duration + 0.05);
+    } catch(e) {
+        console.error("Web audio failed", e);
+    }
+}
+
+function playBeep(freq, volume, durationMs) {
+    if (isAudioMuted || !audioContext) return;
+    try {
+        let osc = audioContext.createOscillator();
+        let gainNode = audioContext.createGain();
+        osc.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        osc.frequency.value = freq;
+        gainNode.gain.value = volume;
+        osc.start();
+        setTimeout(() => osc.stop(), durationMs);
+    } catch(e){}
+}
+
+function startAlarmTimer() {
+    stopAlarmTimer();
+    soundTimer = setInterval(() => {
+        if (isAudioMuted) return;
+        if (currentThreatLevel === 'CRITICAL') {
+            triggerTacticalTone(880, 0.25);
+            setTimeout(() => triggerTacticalTone(784, 0.25), 300);
+        } else if (currentThreatLevel === 'WARNING') {
+            triggerTacticalTone(660, 0.2);
+        }
+    }, currentThreatLevel === 'CRITICAL' ? 1200 : 2500);
+}
+
+function stopAlarmTimer() {
+    if (soundTimer) {
+        clearInterval(soundTimer);
+        soundTimer = null;
+    }
+}
+
+// Changing page threat level simulation states
+function setThreatLevel(level) {
+    currentThreatLevel = level;
+    
+    // Reset classes
+    const bodyVignette = getOrAddVignetteElement();
+    bodyVignette.className = 'body-threat-vignette';
+    
+    const badge = document.getElementById('threatTextBadge');
+    const stripe = document.getElementById('hazardStripe');
+    const statsCard = document.getElementById('statCardAlerts');
+    
+    // Reset active buttons in simulation group
+    const buttons = document.querySelectorAll('.btn-group .btn');
+    buttons.forEach(btn => {
+        btn.classList.remove('active');
+        if (level === 'NORMAL' && btn.textContent === 'SAFE') btn.classList.add('active');
+        if (level === 'WARNING' && btn.textContent === 'WARN') btn.classList.add('active');
+        if (level === 'CRITICAL' && btn.textContent === 'ALERT') btn.classList.add('active');
+    });
+
+    if (level === 'NORMAL') {
+        bodyVignette.style.boxShadow = 'none';
+        badge.className = 'badge alert-status-badge text-black bg-theme-success';
+        badge.textContent = 'LEVEL: NOMINAL';
+        stripe.style.background = 'repeating-linear-gradient(90deg, var(--soc-neon-green), var(--soc-neon-green) 15px, #000 15px, #000 30px)';
+        document.getElementById('hudMainTitle').className = 'text-theme-success mb-0 tracking-widest fw-black fs-3';
+        document.getElementById('engineStatusText').className = 'text-theme-success';
+        document.getElementById('engineStatusText').textContent = 'SECURE_TUNNEL_ACTIVE';
+        
+        // update stats variables
+        document.getElementById('statAlerts').textContent = zabbixAlertsCount;
+        document.getElementById('statOfflineHosts').textContent = zabbixOfflineHosts;
+        
+        // Reset server status
+        document.getElementById('node-WEB-SRV').setAttribute('data-status', 'critical'); // original Zabbix state
+        
+        triggerTacticalTone(700, 0.15);
+        stopAlarmTimer();
+    } 
+    else if (level === 'WARNING') {
+        bodyVignette.classList.add('vignette-warning');
+        badge.className = 'badge alert-status-badge text-black bg-warning';
+        badge.textContent = 'LEVEL: ANOMALY_DETECTION';
+        stripe.style.background = 'repeating-linear-gradient(90deg, var(--soc-neon-warning), var(--soc-neon-warning) 15px, #000 15px, #000 30px)';
+        
+        // Elevate warning states on stats
+        document.getElementById('statAlerts').textContent = zabbixAlertsCount + 3;
+        
+        triggerTacticalTone(550, 0.3);
+        if (!isAudioMuted) startAlarmTimer();
+    } 
+    else if (level === 'CRITICAL') {
+        bodyVignette.classList.add('vignette-critical');
+        badge.className = 'badge alert-status-badge text-black bg-danger';
+        badge.textContent = 'LEVEL: ACTIVE_INTRUSION';
+        stripe.style.background = 'repeating-linear-gradient(90deg, var(--soc-neon-danger), var(--soc-neon-danger) 15px, #000 15px, #000 30px)';
+        
+        document.getElementById('hudMainTitle').className = 'text-danger mb-0 tracking-widest fw-black fs-3';
+        document.getElementById('engineStatusText').className = 'text-danger';
+        document.getElementById('engineStatusText').textContent = 'INTRUSION_THREAT_CORRELATED';
+        
+        // Elevate warning states on stats
+        document.getElementById('statAlerts').textContent = zabbixAlertsCount + 7;
+        document.getElementById('statOfflineHosts').textContent = zabbixOfflineHosts + 2;
+        
+        // Trigger firewall/server critical visual overrides in topology map
+        document.getElementById('node-FIREWALL-01').setAttribute('data-status', 'critical');
+        
+        triggerTacticalTone(440, 0.5);
+        if (!isAudioMuted) startAlarmTimer();
+    }
+    
+    // Inject log event
+    consoleLogDatabase.push({
+        time: formatTime(new Date()),
+        type: level === 'NORMAL' ? 'SYSTEM' : (level === 'WARNING' ? 'WARNING' : 'THREAT'),
+        msg: `[SIMULATION] Threat correlation profile changed to ${level}. Sec-Ops response state altered.`
+    });
+    renderLogsToViewport();
+}
+
+function getOrAddVignetteElement() {
+    let vignette = document.getElementById('bodyThreatVignette');
+    if (!vignette) {
+        vignette = document.createElement('div');
+        vignette.id = 'bodyThreatVignette';
+        vignette.className = 'body-threat-vignette';
+        document.body.appendChild(vignette);
+    }
+    return vignette;
+}
+
+// Interactive host selection and detailed drawer loading
+function selectNode(nodeName) {
+    // Play clicks
+    playBeep(1200, 0.04, 25);
+    setTimeout(() => playBeep(1500, 0.04, 20), 40);
+    
+    // Remove active markers on previous nodes
+    const allNodes = document.querySelectorAll('.topology-device-node, .micro-endpoint');
+    allNodes.forEach(node => node.classList.remove('selected-node'));
+    
+    // Mark target node as active
+    const targetElement = document.getElementById(`node-${nodeName}`);
+    if (targetElement) targetElement.classList.add('selected-node');
+    
+    // Fetch stats
+    const hostData = fallbackCatalog[nodeName];
+    if (!hostData) return;
+    
+    activeSelectedNode = nodeName;
+    
+    // Show views
+    document.getElementById('noNodeSelectedView').classList.add('d-none');
+    document.getElementById('nodeSelectedView').classList.remove('d-none');
+    
+    // Update detail text fields
+    document.getElementById('detailHostName').textContent = nodeName;
+    document.getElementById('detailHostIp').textContent = hostData.ip;
+    document.getElementById('detailHostType').textContent = hostData.type;
+    document.getElementById('detailHostModel').textContent = hostData.model;
+    document.getElementById('detailHostMac').textContent = hostData.mac;
+    document.getElementById('detailHostUptime').textContent = hostData.uptime;
+    document.getElementById('detailHostTemp').textContent = hostData.temp;
+    
+    // Update badge status
+    const statusBadge = document.getElementById('detailHostStatusBadge');
+    statusBadge.textContent = hostData.status.toUpperCase();
+    if (hostData.status === 'online') {
+        statusBadge.className = 'badge bg-theme-success-opacity text-theme-success border border-success';
+    } else if (hostData.status === 'warning') {
+        statusBadge.className = 'badge bg-warning-opacity text-warning border border-warning';
+    } else if (hostData.status === 'critical') {
+        statusBadge.className = 'badge bg-danger-opacity text-danger border border-danger';
+    } else {
+        statusBadge.className = 'badge bg-secondary-opacity text-muted border border-secondary';
+    }
+    
+    // Populate Gauges
+    updateHostGauges(hostData.cpu, hostData.ram, hostData.status);
+    
+    // Populate ports list
+    const portsBody = document.getElementById('detailPortsBody');
+    portsBody.innerHTML = '';
+    
+    if (hostData.ports.length === 0) {
+        portsBody.innerHTML = '<tr><td colspan="3" class="text-muted text-center py-2">No active ports listening.</td></tr>';
+    } else {
+        hostData.ports.forEach(port => {
+            let badgeClass = 'bg-theme-success';
+            if (port.st === 'FILTERED') badgeClass = 'bg-warning text-black';
+            else if (port.st === 'CLOSED') badgeClass = 'bg-secondary';
+            
+            portsBody.innerHTML += `
+                <tr>
+                    <td class="text-theme-success py-1">${port.p}/TCP</td>
+                    <td class="text-white py-1">${port.s}</td>
+                    <td class="text-end py-1"><span class="badge ${badgeClass}">${port.st}</span></td>
+                </tr>
+            `;
+        });
+    }
+    
+    // Reset mini-console
+    document.getElementById('miniConsole').textContent = `SEC-OS ${nodeName} CONSOLE v1.02 // IP: ${hostData.ip}\nCOMMAND MODULE READY.\n`;
+}
+
+function updateHostGauges(cpu, ram, status) {
+    setGaugeCircle('cpuGaugeCircle', 'cpuGaugeText', cpu, status);
+    setGaugeCircle('ramGaugeCircle', 'ramGaugeText', ram, status);
+}
+
+function setGaugeCircle(circleId, textId, val, status) {
+    const circle = document.getElementById(circleId);
+    const text = document.getElementById(textId);
+    if (!circle || !text) return;
+    
+    const circumference = 263.8; // 2 * pi * r (r=42)
+    const offset = circumference - (val / 100) * circumference;
+    
+    circle.style.strokeDashoffset = offset;
+    text.textContent = val + '%';
+    
+    let color = 'var(--soc-neon-green)';
+    if (status === 'critical' || val > 85) {
+        color = 'var(--soc-neon-danger)';
+    } else if (status === 'warning' || val > 65) {
+        color = 'var(--soc-neon-warning)';
+    }
+    circle.style.stroke = color;
+}
+
+// Mini console tool execution simulator
+function simulateHostAction(action) {
+    if (!activeSelectedNode) return;
+    const hostData = fallbackCatalog[activeSelectedNode];
+    const miniConsole = document.getElementById('miniConsole');
+    
+    playBeep(1000, 0.05, 40);
+    
+    if (action === 'PING') {
+        miniConsole.innerHTML = `PING ${hostData.ip} (56 data bytes)...\n`;
+        let counter = 1;
+        
+        let interval = setInterval(() => {
+            if (counter > 4) {
+                miniConsole.innerHTML += `--- ${hostData.ip} ping statistics ---\n4 packets transmitted, 4 received, 0% packet loss\nrtt min/avg/max = 1.05/4.20/12.45 ms\n`;
+                clearInterval(interval);
+                miniConsole.scrollTop = miniConsole.scrollHeight;
+                return;
+            }
+            let latency = (Math.random() * 12 + 1).toFixed(2);
+            miniConsole.innerHTML += `64 bytes from ${hostData.ip}: icmp_seq=${counter} ttl=64 time=${latency} ms\n`;
+            miniConsole.scrollTop = miniConsole.scrollHeight;
+            counter++;
+            
+            // play tiny tick sound
+            playBeep(1400, 0.02, 10);
+        }, 300);
+    } 
+    else if (action === 'SCAN') {
+        miniConsole.innerHTML = `Starting Nmap 7.92 ( https://nmap.org ) at ${formatTime(new Date())}\n`;
+        miniConsole.innerHTML += `Initiating TCP Syn Stealth Scan against ${hostData.ip}...\n`;
+        
+        setTimeout(() => {
+            miniConsole.innerHTML += `Scanning open ports...\n`;
+            miniConsole.scrollTop = miniConsole.scrollHeight;
+        }, 600);
+        
+        setTimeout(() => {
+            if (hostData.ports.length === 0) {
+                miniConsole.innerHTML += `Host appears to be down or blocking scan probes.\n`;
+            } else {
+                miniConsole.innerHTML += `PORT     STATE  SERVICE\n`;
+                hostData.ports.forEach(port => {
+                    miniConsole.innerHTML += `${port.p}/tcp  ${port.st.toLowerCase().padEnd(6)} ${port.s.toLowerCase()}\n`;
+                });
+            }
+            miniConsole.innerHTML += `Nmap scan complete: 1 IP address scanned in 1.45 seconds.\n`;
+            miniConsole.scrollTop = miniConsole.scrollHeight;
+        }, 1500);
+    }
+    else if (action === 'REBOOT') {
+        miniConsole.innerHTML = `WARNING: Broad casting SIGTERM reboot signals to host core...\n`;
+        miniConsole.innerHTML += `Executing SSH sysctl 'reboot -f' on root context...\n`;
+        
+        // Temporarily set node status to offline in map
+        const mapNode = document.getElementById(`node-${activeSelectedNode}`);
+        if (mapNode) {
+            mapNode.setAttribute('data-status', 'offline');
+        }
+        
+        // update drawer status indicator
+        document.getElementById('detailHostStatusBadge').textContent = 'OFFLINE';
+        document.getElementById('detailHostStatusBadge').className = 'badge bg-secondary-opacity text-muted border border-secondary';
+        
+        // dynamic logs
+        consoleLogDatabase.push({
+            time: formatTime(new Date()),
+            type: 'WARNING',
+            msg: `REBOOT_INTEL: Host ${activeSelectedNode} (${hostData.ip}) was manually rebooted by operator.`
+        });
+        renderLogsToViewport();
+        
+        setTimeout(() => {
+            miniConsole.innerHTML += `CONNECTION LOST: Remote host closed the socket connection.\n`;
+            miniConsole.scrollTop = miniConsole.scrollHeight;
+        }, 800);
+        
+        // Restore node in 5s
+        setTimeout(() => {
+            if (mapNode) {
+                mapNode.setAttribute('data-status', hostData.status);
+            }
+            if (activeSelectedNode === hostData.name) {
+                selectNode(hostData.name);
+            }
+            miniConsole.innerHTML += `CONNECTION RE-ESTABLISHED: System systemd logs active.\n`;
+            miniConsole.scrollTop = miniConsole.scrollHeight;
+            
+            consoleLogDatabase.push({
+                time: formatTime(new Date()),
+                type: 'SYSTEM',
+                msg: `REBOOT_INTEL: Host ${hostData.name} back online. All daemons restarted.`
+            });
+            renderLogsToViewport();
+        }, 5000);
+    }
+}
+
+// Manual sweeps (Initiate security scan)
+function triggerManualSweep() {
+    const scanner = document.getElementById('radarScanner');
+    scanner.style.display = 'block';
+    
+    playBeep(440, 0.08, 100);
+    setTimeout(() => playBeep(554, 0.08, 100), 100);
+    setTimeout(() => playBeep(659, 0.08, 150), 200);
+    
+    consoleLogDatabase.push({
+        time: formatTime(new Date()),
+        type: 'SYSTEM',
+        msg: `[AUDIT] Security sweep initiated on layer interface. Checking device validation hashes...`
+    });
+    renderLogsToViewport();
+    
+    let nodes = Object.keys(fallbackCatalog);
+    let index = 0;
+    
+    // Cycle highlights
+    let interval = setInterval(() => {
+        if (index >= nodes.length) {
+            clearInterval(interval);
+            scanner.style.display = 'none';
+            
+            // Sweep complete alert chime
+            playBeep(880, 0.06, 60);
+            setTimeout(() => playBeep(1320, 0.08, 100), 60);
+            
+            consoleLogDatabase.push({
+                time: formatTime(new Date()),
+                type: 'SYSTEM',
+                msg: `[AUDIT] Security sweep complete. Zabbix nodes responded with OK. 0 active exploits verified.`
+            });
+            renderLogsToViewport();
+            return;
+        }
+        
+        let currentNode = nodes[index];
+        let element = document.getElementById(`node-${currentNode}`);
+        if (element) {
+            element.classList.add('selected-node');
+            setTimeout(() => {
+                if (activeSelectedNode !== currentNode) {
+                    element.classList.remove('selected-node');
+                }
+            }, 300);
+        }
+        
+        consoleLogDatabase.push({
+            time: formatTime(new Date()),
+            type: 'SYSTEM',
+            msg: `[AUDIT] Scanning asset ${currentNode} IP: ${fallbackCatalog[currentNode].ip} -- STATUS: ${fallbackCatalog[currentNode].status.toUpperCase()}`
+        });
+        renderLogsToViewport();
+        
+        index++;
+    }, 250);
+}
+
+// Pan & zoom reset helper
+function resetMapTransforms() {
+    const container = document.getElementById('mapPanContainer');
+    if (container) {
+        container.style.transform = 'scale(1) translate(0px, 0px)';
+        playBeep(800, 0.04, 30);
+    }
+}
+
+// Make map viewport draggable (pan)
+function initMapPanning() {
+    const viewport = document.getElementById('mapViewport');
+    const container = document.getElementById('mapPanContainer');
+    
+    let isDragging = false;
+    let startX, startY;
+    let translateX = 0, translateY = 0;
+    let scale = 1;
+    
+    viewport.addEventListener('mousedown', (e) => {
+        // Only trigger panning when clicking the canvas grid, not nodes
+        if (e.target.closest('.topology-device-node, .micro-endpoint, button')) return;
+        
+        isDragging = true;
+        startX = e.clientX - translateX;
+        startY = e.clientY - translateY;
+        viewport.style.cursor = 'grabbing';
+    });
+    
+    window.addEventListener('mousemove', (e) => {
+        if (!isDragging) return;
+        translateX = e.clientX - startX;
+        translateY = e.clientY - startY;
+        container.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    });
+    
+    window.addEventListener('mouseup', () => {
+        isDragging = false;
+        viewport.style.cursor = 'default';
+    });
+    
+    // mouse wheel zooming
+    viewport.addEventListener('wheel', (e) => {
+        e.preventDefault();
+        const delta = e.deltaY;
+        if (delta < 0) {
+            scale = Math.min(scale + 0.05, 1.4);
+        } else {
+            scale = Math.max(scale - 0.05, 0.7);
+        }
+        container.style.transform = `translate(${translateX}px, ${translateY}px) scale(${scale})`;
+    });
+}
+
+// Force a threat intrusion warning test
+function simulateThreatAlert() {
+    setThreatLevel('CRITICAL');
+    
+    // Add custom table row of threat dynamically
+    const table = document.getElementById('incidentsTableBody');
+    const newRow = document.createElement('tr');
+    newRow.className = 'incident-row';
+    newRow.setAttribute('data-severity', 'critical');
+    
+    let timeStr = formatTime(new Date());
+    newRow.innerHTML = `
+        <td class="timestamp-cell text-danger fw-bold">${timeStr}</td>
+        <td class="text-danger fw-bold">CORE-ROUTER-01</td>
+        <td class="text-danger fw-bold">10.0.0.1</td>
+        <td class="text-danger fw-bold text-uppercase">BGP SESS_RESET: Potential route hijacking attempt detected!</td>
+        <td><span class="badge bg-danger text-black">CRITICAL</span></td>
+    `;
+    
+    table.insertBefore(newRow, table.firstChild);
+    
+    // Increment counts
+    document.getElementById('criticalSummaryCount').textContent = "3 CRITICAL";
+}
+
+// Boot operations
+window.addEventListener('DOMContentLoaded', () => {
+    setupConsoleTicker();
+    initMapPanning();
+    
+    // Automatically select core router on start to populate initial details drawer
+    selectNode('CORE-ROUTER-01');
+});
+</script>
+{% endblock %}

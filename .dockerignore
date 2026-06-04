@@ -1,0 +1,19 @@
+# CYBEROPS Docker ignore list
+.venv/
+venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.git/
+.github/
+.vscode/
+.idea/
+db.sqlite3-journal
+.gemini/
+*.log
+.DS_Store
+*.img
+*.pcap
+*.evtx
+*.log

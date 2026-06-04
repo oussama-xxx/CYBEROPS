@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CYBEROPS CORE // SECURITY COMMAND HUD</title>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.2/font/bootstrap-icons.min.css">
+    
+    <!-- Tailwind Play CDN with preflight disabled -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            corePlugins: {
+                preflight: false,
+            }
+        }
+    </script>
+    
+    <style>
+
+
+
+        /* Vignette flashing frames for critical/warning states */
+        .body-threat-vignette {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none;
+            z-index: 99999;
+            box-shadow: inset 0 0 120px rgba(0, 0, 0, 0);
+            transition: box-shadow 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .body-threat-vignette.vignette-warning {
+            box-shadow: inset 0 0 100px rgba(255, 170, 0, 0.3);
+            animation: vignette-pulse 3s infinite;
+        }
+        .body-threat-vignette.vignette-critical {
+            box-shadow: inset 0 0 120px rgba(255, 51, 102, 0.4);
+            animation: vignette-pulse-fast 1s infinite alternate;
+        }
+
+        @keyframes vignette-pulse {
+            0% { opacity: 0.7; }
+            50% { opacity: 1.0; }
+            100% { opacity: 0.7; }
+        }
+        @keyframes vignette-pulse-fast {
+            0% { opacity: 0.6; box-shadow: inset 0 0 80px rgba(255, 51, 102, 0.35); }
+            100% { opacity: 1.0; box-shadow: inset 0 0 130px rgba(255, 51, 102, 0.55); }
+        }
+
+        /* 📟 DEEP DEFENSE VARIABLE ENGINE */
+        :root {
+            --soc-core-black: #04070a;
+            --soc-panel-dark: #090e15;
+            --soc-thick-border: #1a293d;
+            --soc-neon-green: #00ff99;
+            --soc-neon-shadow: rgba(0, 255, 153, 0.35);
+            --soc-text-vibrant: #ffffff;
+            --soc-text-dimmed: #7a8f9a;
+            
+            /* Status Theme Colors dynamic inject markers */
+            --soc-neon-danger: #ff3366;
+            --soc-neon-warning: #ffaa00;
+        }
+
+        *, *::before, *::after {
+            box-sizing: border-box !important;
+        }
+
+        html, body {
+            background-color: var(--soc-core-black) !important;
+            color: var(--soc-text-vibrant) !important;
+            font-family: 'Consolas', 'Courier New', Courier, monospace !important; 
+            font-weight: 900;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* 📡 GENERAL CANVAS ROUTER */
+        .soc-master-viewport {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            background: radial-gradient(circle at center, #0a1018 0%, #04070a 100%);
+        }
+
+        /* 🚀 RADIAL COMMAND TOP CONTROL HUD BAR */
+        .soc-top-hud-bar {
+            background-color: var(--soc-core-black);
+            border-bottom: 4px solid var(--soc-thick-border);
+            padding: 22px 40px;
+            box-shadow: 0 6px 30px rgba(0, 0, 0, 0.7);
+            z-index: 999;
+            position: relative;
+        }
+
+        /* 🌐 HACKER STREAM CANVAS OVERLAY CONTAINER */
+        .soc-navbar-stream-container {
+            flex-grow: 1;
+            height: 50px;
+            margin: 0 40px;
+            position: relative;
+            overflow: hidden;
+            border-left: 1px dashed rgba(26, 41, 61, 0.5);
+            border-right: 1px dashed rgba(26, 41, 61, 0.5);
+            opacity: 0.35;
+        }
+
+        #navHackerCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ⚡ TERMINAL GLITCH CORE ENGINE */
+        .soc-hud-title {
+            font-size: 2.1rem;
+            letter-spacing: 4px;
+            color: #ffffff;
+            text-shadow: 0 0 15px var(--soc-neon-shadow);
+            display: flex;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        .glitch-wrapper {
+            position: relative;
+            display: inline-block;
+        }
+
+        .glitch-text {
+            position: relative;
+            animation: glitch-anim 3.5s infinite linear alternate-reverse;
+        }
+
+        .glitch-text::before,
+        .glitch-text::after {
+            content: "CYBEROPS";
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--soc-core-black);
+        }
+
+        .glitch-text::before {
+            left: 2px;
+            text-shadow: -2px 0 #ff3366;
+            clip: rect(44px, 450px, 56px, 0);
+            animation: glitch-anim-2 6s infinite linear alternate-reverse;
+        }
+
+        .glitch-text::after {
+            left: -2px;
+            text-shadow: -2px 0 #00d2ff;
+            clip: rect(85px, 450px, 140px, 0);
+            animation: glitch-anim 2.5s infinite linear alternate-reverse;
+        }
+
+        @keyframes glitch-anim {
+            0% { clip: rect(15px, 9999px, 66px, 0); transform: skew(0.3deg); }
+            5% { clip: rect(85px, 9999px, 5px, 0); transform: skew(0.5deg); }
+            10% { clip: rect(34px, 9999px, 55px, 0); transform: skew(-0.2deg); }
+            15% { clip: rect(0px, 9999px, 0px, 0); transform: skew(0deg); }
+            100% { clip: rect(0px, 9999px, 0px, 0); transform: skew(0deg); }
+        }
+
+        @keyframes glitch-anim-2 {
+            0% { clip: rect(0px, 9999px, 0px, 0); transform: skew(0deg); }
+            10% { clip: rect(70px, 9999px, 105px, 0); transform: skew(-0.5deg); }
+            15% { clip: rect(12px, 9999px, 85px, 0); transform: skew(0.2deg); }
+            20% { clip: rect(0px, 9999px, 0px, 0); transform: skew(0deg); }
+            100% { clip: rect(0px, 9999px, 0px, 0); transform: skew(0deg); }
+        }
+
+        /* 🎛️ SYSTEM CORE RUNTIME SPLITS */
+        .soc-workspace-split {
+            display: flex;
+            flex-grow: 1;
+            height: calc(100vh - 98px);
+            overflow: hidden;
+        }
+
+        /* 🎰 SIDEBAR PANEL CONSOLE */
+        .soc-sidebar-panel {
+    width: 360px;
+    background-color: var(--soc-panel-dark);
+    border-right: 3px solid var(--soc-thick-border);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    flex-shrink: 0;
+    padding: 35px 15px;
+    overflow-y: auto; /* enable scrolling */
+    max-height: 100vh; /* limit height */
+    color: var(--soc-text-vibrant);
+}
+
+        .soc-nav-container {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .soc-btn-node {
+            display: flex;
+            align-items: center;
+            padding: 24px 25px;
+            background: rgba(11, 17, 26, 0.6);
+            border: 2px solid var(--soc-thick-border);
+            color: var(--soc-text-dimmed);
+            text-decoration: none;
+            border-radius: 0px !important;
+            font-size: 1.15rem;
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            transition: all 0.2s ease-in-out;
+        }
+
+        .soc-btn-node i {
+            font-size: 1.6rem;
+            margin-right: 20px;
+            color: var(--soc-text-dimmed);
+        }
+
+        .soc-btn-node:hover {
+            color: var(--soc-neon-green) !important;
+            border-color: var(--soc-neon-green);
+            background: rgba(0, 255, 153, 0.05);
+            box-shadow: 0 0 15px rgba(0, 255, 153, 0.1);
+            transform: translateX(6px);
+        }
+
+        /* Active navigation state mapping */
+        .soc-node-active {
+            color: #000000 !important;
+            background: var(--soc-neon-green) !important;
+            border-color: var(--soc-neon-green) !important;
+            font-weight: 900 !important;
+            box-shadow: 0 0 25px var(--soc-neon-shadow) !important;
+        }
+
+        .soc-node-active i {
+            color: #000000 !important;
+        }
+
+        /* User Dropdown Styles */
+        .soc-user-dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .soc-user-btn {
+            background: transparent;
+            border: 2px solid var(--soc-thick-border);
+            color: var(--soc-text-dimmed);
+            padding: 10px 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .soc-user-btn:hover {
+            border-color: var(--soc-neon-green);
+            color: var(--soc-neon-green);
+        }
+
+        .soc-dropdown-menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: var(--soc-panel-dark);
+            border: 2px solid var(--soc-thick-border);
+            min-width: 200px;
+            z-index: 1000;
+            display: none;
+        }
+
+        .soc-dropdown-menu.show {
+            display: block;
+        }
+
+        .soc-dropdown-item {
+            display: block;
+            padding: 12px 20px;
+            color: var(--soc-text-dimmed);
+            text-decoration: none;
+            transition: all 0.2s;
+        }
+
+        .soc-dropdown-item:hover {
+            background: rgba(0, 255, 153, 0.1);
+            color: var(--soc-neon-green);
+        }
+
+        .soc-dropdown-divider {
+            height: 1px;
+            background: var(--soc-thick-border);
+            margin: 8px 0;
+        }
+
+        /* Alert Messages */
+        .soc-alert {
+            position: fixed;
+            top: 100px;
+            right: 20px;
+            z-index: 9999;
+            min-width: 300px;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        /* 🛰️ INTERACTIVE STREAM DATA CANVAS */
+        .soc-main-stream-canvas {
+            flex-grow: 1;
+            padding: 40px !important;
+            padding-bottom: 80px !important; 
+            overflow-y: auto;
+            background-image: 
+                linear-gradient(rgba(0, 255, 153, 0.015) 2px, transparent 2px),
+                linear-gradient(90deg, rgba(0, 255, 153, 0.015) 2px, transparent 2px);
+            background-size: 40px 40px;
+        }
+
+        /* Custom Tactical Scrollbars */
+        .soc-main-stream-canvas::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .soc-main-stream-canvas::-webkit-scrollbar-track {
+            background: var(--soc-core-black);
+        }
+        .soc-main-stream-canvas::-webkit-scrollbar-thumb {
+            background: var(--soc-thick-border);
+        }
+        .soc-main-stream-canvas::-webkit-scrollbar-thumb:hover {
+            background: var(--soc-neon-green);
+        }
+
+        /* 🚨 CARD COMPONENTS UTILITIES */
+        .soc-card {
+            background-color: var(--soc-panel-dark) !important;
+            border: 3px solid var(--soc-thick-border) !important;
+            border-radius: 0px !important;
+            padding: 35px !important;
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;
+        }
+
+        .border-theme-dark-soft {
+            border-color: var(--soc-thick-border) !important;
+        }
+
+        .btn-theme-success {
+            border-radius: 0px !important;
+            font-size: 1.2rem !important;
+            padding: 18px 35px !important;
+            font-weight: 900 !important;
+            letter-spacing: 1px;
+        }
+
+        .soc-telemetry-footer {
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            border-top: 2px solid var(--soc-thick-border);
+            padding-top: 20px;
+            line-height: 1.6;
+        }
+
+        .text-theme-success { color: #00ff99 !important; }
+        .flex-shrink-0 { flex-shrink: 0 !important; }
+        
+        /* Login/Register Forms */
+        .soc-form-control {
+            background: rgba(11, 17, 26, 0.8);
+            border: 2px solid var(--soc-thick-border);
+            color: var(--soc-text-vibrant);
+            padding: 12px 15px;
+            border-radius: 0;
+        }
+        
+        .soc-form-control:focus {
+            border-color: var(--soc-neon-green);
+            box-shadow: 0 0 10px var(--soc-neon-shadow);
+            background: rgba(11, 17, 26, 0.9);
+            color: var(--soc-text-vibrant);
+        }
+        
+        .soc-label {
+            color: var(--soc-text-dimmed);
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+        
+        .btn-soc-primary {
+            background: transparent;
+            border: 2px solid var(--soc-neon-green);
+            color: var(--soc-neon-green);
+            padding: 12px 30px;
+            font-weight: bold;
+            text-transform: uppercase;
+            transition: all 0.3s;
+        }
+        
+        .btn-soc-primary:hover {
+            background: var(--soc-neon-green);
+            color: #000;
+            box-shadow: 0 0 20px var(--soc-neon-shadow);
+        }
+
+        /* 🤖 TACTICAL CHATBOT ENGINE STYLES - UNIQUEMENT POUR UTILISATEURS CONNECTÉS */
+        .soc-chatbot-wrapper {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            z-index: 10000;
+        }
+
+        .chatbot-trigger-btn {
+            background: var(--soc-panel-dark);
+            border: 2px solid var(--soc-thick-border);
+            color: var(--soc-neon-green);
+            padding: 15px 25px;
+            font-family: 'Consolas', monospace;
+            font-weight: 900;
+            letter-spacing: 1px;
+            cursor: pointer;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: all 0.2s ease;
+        }
+
+        .chatbot-trigger-btn:hover {
+            border-color: var(--soc-neon-green);
+            box-shadow: 0 0 20px var(--soc-neon-shadow);
+            transform: translateY(-2px);
+        }
+
+        .chatbot-window {
+            position: absolute;
+            bottom: 75px;
+            right: 0;
+            width: 360px;
+            height: 460px;
+            background: #05090e;
+            border: 2px solid var(--soc-thick-border);
+            box-shadow: 0 15px 50px rgba(0,0,0,0.95);
+            display: none;
+            flex-direction: column;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .chatbot-window.show {
+            display: flex;
+            animation: chatLaunch 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes chatLaunch {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .chatbot-header {
+            background: var(--soc-panel-dark);
+            padding: 15px 20px;
+            font-size: 0.9rem;
+            color: var(--soc-neon-green);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid var(--soc-thick-border);
+            letter-spacing: 1px;
+        }
+
+        .chatbot-header button {
+            background: transparent; 
+            border: none; 
+            color: var(--soc-text-dimmed); 
+            cursor: pointer;
+            font-size: 1.1rem;
+            transition: color 0.2s;
+        }
+
+        .chatbot-header button:hover {
+            color: var(--soc-neon-danger);
+        }
+
+        .chatbot-body {
+            flex: 1; 
+            padding: 20px; 
+            overflow-y: auto; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px;
+            background: linear-gradient(180deg, #04070a 0%, #020407 100%);
+        }
+
+        .chatbot-msg {
+            padding: 12px 16px; 
+            font-size: 0.88rem; 
+            max-width: 85%;
+            line-height: 1.5; 
+            word-wrap: break-word;
+        }
+
+        .msg-system { 
+            background: rgba(26, 41, 61, 0.3); 
+            color: #cbd5e1; 
+            align-self: flex-start; 
+            border-left: 3px solid var(--soc-neon-green); 
+        }
+
+        .msg-user { 
+            background: rgba(0, 255, 153, 0.08); 
+            color: var(--soc-neon-green); 
+            align-self: flex-end; 
+            border-right: 3px solid var(--soc-neon-green); 
+        }
+
+        .chatbot-footer {
+            display: flex; 
+            padding: 12px; 
+            background: var(--soc-panel-dark); 
+            border-top: 2px solid var(--soc-thick-border);
+        }
+
+        .chatbot-footer input {
+            flex: 1; 
+            background: rgba(4, 7, 10, 0.6); 
+            border: 1px solid var(--soc-thick-border); 
+            color: #fff; 
+            padding: 10px 15px; 
+            font-size: 0.9rem;
+            font-family: 'Consolas', monospace;
+        }
+
+        .chatbot-footer input:focus { 
+            outline: none; 
+            border-color: var(--soc-neon-green);
+        }
+
+        .chatbot-footer button {
+            background: transparent; 
+            border: none; 
+            color: var(--soc-neon-green); 
+            cursor: pointer; 
+            padding: 0 15px;
+            font-size: 1.2rem;
+            transition: transform 0.2s;
+        }
+
+        .chatbot-footer button:hover {
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="soc-master-viewport">
+        
+        <header class="soc-top-hud-bar d-flex justify-content-between align-items-center">
+            <div class="soc-hud-title fw-black">
+                <i class="bi bi-shield-lock text-theme-success me-3"></i> 
+                <div class="glitch-wrapper">
+                    <span class="glitch-text">CYBEROPS</span>
+                </div>
+                <span class="text-muted ms-2" style="font-size: 1.4rem; font-weight: 300;">// SYSTEM</span>
+            </div>
+            
+            <div class="soc-navbar-stream-container d-none d-md-block">
+                <canvas id="navHackerCanvas"></canvas>
+            </div>
+            
+            <div class="font-monospace text-muted flex-shrink-0 d-none d-md-block" style="font-size: 0.9rem; letter-spacing: 1px;">
+                {% if user.is_authenticated %}
+                <button id="soundToggleBtn" onclick="toggleSound()" class="btn btn-outline-theme-success btn-sm me-3" style="border-color: var(--soc-neon-green); color: var(--soc-neon-green); background: transparent; padding: 2px 8px; font-size: 0.8rem; font-family: monospace; display: inline-flex; align-items: center; gap: 4px;">
+                    <i id="soundIcon" class="bi bi-volume-up-fill"></i> Sound: ON
+                </button>
+                <div class="soc-user-dropdown" style="display: inline-block; vertical-align: middle;">
+                    <div class="soc-user-btn" onclick="toggleDropdown()">
+                        <i class="bi bi-person-circle"></i> {{ user.username }}
+                        <i class="bi bi-chevron-down"></i>
+                    </div>
+                    <div id="userDropdown" class="soc-dropdown-menu">
+                        <a href="{% url 'analyzer:profile' %}" class="soc-dropdown-item">
+                            <i class="bi bi-person-circle profile-avatar-icon"></i> Profile
+                        </a>
+                        <a href="{% url 'analyzer:contact' %}" class="soc-dropdown-item">
+                           <i class="bi bi-envelope-at-fill"></i>
+                           <span>Contact_HQ</span>
+                        </a>
+                        <div class="soc-dropdown-divider"></div>
+                        <a href="{% url 'analyzer:logout' %}" class="soc-dropdown-item">
+                            <i class="bi bi-box-arrow-right"></i> Logout
+                        </a>
+                    </div>
+                </div>
+                {% else %}
+                <div>
+                    
+                </div>
+                {% endif %}
+            </div>
+        </header>
+
+        <div class="soc-workspace-split">
+            
+            <aside class="soc-sidebar-panel">
+                <div class="soc-nav-container">
+                    
+                    <div class="text-muted small px-2 mb-2 tracking-widest" style="font-size: 0.8rem; font-weight: bold;">// OPERATIONS_CONTROL</div>
+                    
+                    {% if user.is_authenticated %}
+                    <a href="{% url 'analyzer:home' %}" class="soc-btn-node {% if request.resolver_match.view_name == 'analyzer:home' %}soc-node-active{% endif %}">
+                        <i class="bi bi-terminal-split"></i> DASHBOARD
+                    </a>
+                    
+                    <a href="{% url 'analyzer:ip_analyzer' %}" class="soc-btn-node {% if request.resolver_match.view_name == 'analyzer:ip_analyzer' %}soc-node-active{% endif %}">
+                        <i class="bi bi-activity"></i> IP ANALYZER
+                    </a>
+                    
+                    <div class="text-muted small px-2 mt-4 mb-2 tracking-widest" style="font-size: 0.8rem; font-weight: bold;">// SUB_MODULES</div>
+                    
+                    <a href="{% url 'analyzer:url_analyzer' %}" class="soc-btn-node {% if request.resolver_match.view_name == 'analyzer:url_analyzer' %}soc-node-active{% endif %}">
+                        <i class="bi bi-globe-americas"></i> URL SCANNER
+                    </a>
+                    
+                    <a href="{% url 'analyzer:file_analyzer' %}" class="soc-btn-node {% if request.resolver_match.view_name == 'analyzer:file_analyzer' %}soc-node-active{% endif %}">
+                        <i class="bi bi-hash"></i> FILE SCANNER
+                    </a>
+                    
+                    <a href="{% url 'analyzer:deep_analyzer' %}" class="soc-btn-node {% if request.resolver_match.view_name == 'analyzer:deep_analyzer' %}soc-node-active{% endif %}">
+                        <i class="bi bi-radioactive"></i> DEEP FORENSICS
+                    </a>
+                    
+                    <!-- NOUVEAU BOUTON SUPERVISOR AJOUTÉ ICI -->
+                    <a href="{% url 'analyzer:supervisor' %}" class="soc-btn-node {% if request.resolver_match.view_name == 'analyzer:supervisor' %}soc-node-active{% endif %}">
+                        <i class="bi bi-eye-fill"></i> SUPERVISOR
+                    </a>
+                    <!-- FIN NOUVEAU BOUTON -->
+                    
+                    <a href="{% url 'analyzer:terminal' %}" class="soc-btn-node {% if request.resolver_match.view_name == 'analyzer:terminal' %}soc-node-active{% endif %}">
+                        <i class="bi bi-terminal"></i> TERMINAL
+                    </a>
+                    
+                    <a href="{% url 'analyzer:honeypot' %}" class="soc-btn-node {% if request.resolver_match.view_name == 'analyzer:honeypot' %}soc-node-active{% endif %}">
+                        <i class="bi bi-shield-fill-exclamation"></i> HONEYPOT
+                    </a>
+                    
+                    <a href="{% url 'analyzer:blacklist_checker' %}" class="soc-btn-node {% if request.resolver_match.view_name == 'analyzer:blacklist_checker' %}soc-node-active{% endif %}">
+                        <i class="bi bi-shield-slash"></i> BLACKLIST DB
+                    </a>
+                    
+                    <a href="{% url 'analyzer:server_intel' %}" class="soc-btn-node {% if request.resolver_match.view_name == 'analyzer:server_intel' %}soc-node-active{% endif %}">
+                        <i class="bi bi-newspaper"></i> CYBER NEWS
+                    </a>
+                    {% else %}
+                    <a href="{% url 'analyzer:login' %}" class="soc-btn-node">
+                        <i class="bi bi-box-arrow-in-right"></i> LOGIN
+                    </a>
+                    <a href="{% url 'analyzer:register' %}" class="soc-btn-node">
+                        <i class="bi bi-person-plus"></i> REGISTER
+                    </a>
+                    {% endif %}
+                </div>
+                
+                
+            </aside>
+
+            <main class="soc-main-stream-canvas">
+                {% if messages %}
+                    {% for message in messages %}
+                    <div class="soc-alert alert alert-{{ message.tags }} fade-in" role="alert">
+                        <i class="bi bi-{% if message.tags == 'success' %}check-circle{% elif message.tags == 'error' %}exclamation-triangle{% else %}info-circle{% endif %} me-2"></i>
+                        {{ message }}
+                        <button type="button" class="btn-close float-end" data-bs-dismiss="alert" style="filter: invert(1);"></button>
+                    </div>
+                    {% endfor %}
+                {% endif %}
+                
+                {% block content %}
+                {% endblock %}
+            </main>
+
+        </div>
+    </div>
+
+    <!-- 🤖 CHATBOT - Affiche uniquement si l'utilisateur est authentifié -->
+    {% if user.is_authenticated %}
+    <div class="soc-chatbot-wrapper">
+        <button class="chatbot-trigger-btn" onclick="toggleChatbotWindow()">
+            <i class="bi bi-chat-left-dots-fill"></i> CORE_AI
+        </button>
+        
+        <div class="chatbot-window" id="tacticalChatbotWindow">
+            <div class="chatbot-header">
+                <span>// CORE_INTELLIGENCE_NODE v1.0</span>
+                <button onclick="toggleChatbotWindow()"><i class="bi bi-x-lg"></i></button>
+            </div>
+            <div class="chatbot-body" id="chatbotChatBody">
+                <div class="chatbot-msg msg-system">Establishing secure connection... Ready for system deployment queries.</div>
+            </div>
+            <div class="chatbot-footer">
+                <input type="text" id="chatbotInterfaceInput" placeholder="Execute system query..." onkeypress="handleChatbotKeyPress(event)">
+                <button onclick="transmitChatbotMessage()"><i class="bi bi-send-fill"></i></button>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Dropdown Toggle
+        function toggleDropdown() {
+            const dropdown = document.getElementById('userDropdown');
+            dropdown.classList.toggle('show');
+        }
+        
+        // Close dropdown when clicking outside
+        window.onclick = function(event) {
+            if (!event.target.matches('.soc-user-btn') && !event.target.matches('.soc-user-btn *')) {
+                const dropdowns = document.getElementsByClassName('soc-dropdown-menu');
+                for (let i = 0; i < dropdowns.length; i++) {
+                    if (dropdowns[i].classList.contains('show')) {
+                        dropdowns[i].classList.remove('show');
+                    }
+                }
+            }
+        }
+        
+        // Auto-hide alerts after 5 seconds
+        setTimeout(function() {
+            const alerts = document.querySelectorAll('.soc-alert');
+            alerts.forEach(alert => {
+                alert.style.transition = 'opacity 0.5s';
+                alert.style.opacity = '0';
+                setTimeout(() => alert.remove(), 500);
+            });
+        }, 5000);
+
+        // 🤖 CHATBOT OPERATIONAL SCRIPTING - Uniquement si l'utilisateur est connecté
+        {% if user.is_authenticated %}
+        function toggleChatbotWindow() {
+            const chatWin = document.getElementById('tacticalChatbotWindow');
+            chatWin.classList.toggle('show');
+        }
+
+        function handleChatbotKeyPress(event) {
+            if (event.key === 'Enter') {
+                transmitChatbotMessage();
+            }
+        }
+
+        function transmitChatbotMessage() {
+            const inputField = document.getElementById('chatbotInterfaceInput');
+            const chatBody = document.getElementById('chatbotChatBody');
+            const message = inputField.value.trim();
+            
+            if (!message) return;
+            
+            // Render user message instantly
+            chatBody.innerHTML += `<div class="chatbot-msg msg-user">${escapeHtml(message)}</div>`;
+            inputField.value = '';
+            chatBody.scrollTop = chatBody.scrollHeight;
+            
+            // Dispatch request to tactical chatbot endpoint
+            fetch('{% url "analyzer:chatbot_api" %}', {
+                method: 'POST',
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ message: message })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.response) {
+                    chatBody.innerHTML += `<div class="chatbot-msg msg-system">${escapeHtml(data.response)}</div>`;
+                } else {
+                    chatBody.innerHTML += `<div class="chatbot-msg msg-system" style="border-color: var(--soc-neon-danger);">Signal interception failure. Trace logs.</div>`;
+                }
+                chatBody.scrollTop = chatBody.scrollHeight;
+            })
+            .catch(err => {
+                chatBody.innerHTML += `<div class="chatbot-msg msg-system" style="border-color: var(--soc-neon-danger);">Node isolation detected. Connection lost.</div>`;
+            });
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        {% endif %}
+        
+        let isAudioMuted = false;
+        let audioCtx = null;
+
+        function toggleSound() {
+            isAudioMuted = !isAudioMuted;
+            const btn = document.getElementById('soundToggleBtn');
+            if (btn) {
+                if (isAudioMuted) {
+                    btn.innerHTML = '<i id="soundIcon" class="bi bi-volume-mute-fill"></i> Sound: OFF';
+                    btn.style.borderColor = 'var(--soc-text-dimmed)';
+                    btn.style.color = 'var(--soc-text-dimmed)';
+                } else {
+                    btn.innerHTML = '<i id="soundIcon" class="bi bi-volume-up-fill"></i> Sound: ON';
+                    btn.style.borderColor = 'var(--soc-neon-green)';
+                    btn.style.color = 'var(--soc-neon-green)';
+                }
+            }
+        }
+
+        function playBeep(frequency, duration, volume = 0.1) {
+            if (isAudioMuted) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.frequency.setValueAtTime(frequency, audioCtx.currentTime);
+                gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.00001, audioCtx.currentTime + duration);
+                osc.start(audioCtx.currentTime);
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) {
+                console.error("Audio error:", e);
+            }
+        }
+
+        function getOrAddVignetteElement() {
+            let vignette = document.getElementById('bodyThreatVignette');
+            if (!vignette) {
+                vignette = document.createElement('div');
+                vignette.id = 'bodyThreatVignette';
+                vignette.className = 'body-threat-vignette';
+                document.body.appendChild(vignette);
+            }
+            return vignette;
+        }
+
+        function pollThreatStatus() {
+            fetch('/check_threat/')
+                .then(response => response.json())
+                .then(data => {
+                    const vignette = getOrAddVignetteElement();
+                    vignette.className = 'body-threat-vignette';
+                    
+                    if (data.status === 'CRITICAL') {
+                        vignette.classList.add('vignette-critical');
+                        playBeep(440, 0.4, 0.15);
+                    } else if (data.status === 'WARNING') {
+                        vignette.classList.add('vignette-warning');
+                        playBeep(550, 0.2, 0.1);
+                    }
+                })
+                .catch(err => console.error("Error polling threat status:", err));
+        }
+
+        // Run poller every 10 seconds if authenticated
+        {% if user.is_authenticated %}
+        setInterval(pollThreatStatus, 10000);
+        pollThreatStatus(); // initial call
+        {% endif %}
+        
+        // 📟 MATRIX RAIN LOGIC
+        const canvas = document.getElementById('navHackerCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.offsetWidth;
+            canvas.height = canvas.parentElement.offsetHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const katakana = "0101010110100110XF_SYS_MATRIX_SEC_L3_ERR_OUSSAMA_";
+        const alphabet = katakana.split("");
+
+        const fontSize = 11;
+        const columns = canvas.width / fontSize;
+
+        const rainDrops = [];
+        for (let x = 0; x < columns; x++) {
+            rainDrops[x] = 1;
+        }
+
+        function drawMatrixRain() {
+            ctx.fillStyle = 'rgba(4, 7, 10, 0.08)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#00ff99';
+            ctx.font = fontSize + 'px monospace';
+
+            for (let i = 0; i < rainDrops.length; i++) {
+                const text = alphabet[Math.floor(Math.random() * alphabet.length)];
+                ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+
+                if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                    rainDrops[i] = 0;
+                }
+                rainDrops[i]++;
+            }
+        }
+
+        setInterval(drawMatrixRain, 22);
+    </script>
+</body>
+</html>

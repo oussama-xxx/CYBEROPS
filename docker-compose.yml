@@ -1,0 +1,27 @@
+# =====================================================================
+# 🐳 CYBEROPS DOCKER-COMPOSE ORCHESTRATION LAYER
+# =====================================================================
+version: '3.8'
+
+services:
+  cyberops:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cyberops_engine
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # Map the host SQLite database directly into the container workspace for state persistence
+      - ./db.sqlite3:/app/db.sqlite3
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=cyberops-super-secured-development-key-1092491
+      - ALLOWED_HOSTS=*
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
