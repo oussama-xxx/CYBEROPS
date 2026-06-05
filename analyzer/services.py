@@ -33,7 +33,7 @@ def askgemini(message):
 # 🖥️ ZABBIX INTEGRATION CONFIGURATION
 # =====================================================================
 ZABBIX_URL = "http://localhost:8080/api_jsonrpc.php"
-ZABBIX_AUTH_TOKEN = "4b214b54f400424b1785ee709162224a"  # Token mis à jour
+ZABBIX_AUTH_TOKEN = "??"  # Token mis à jour
 
 
 class ZabbixService:
