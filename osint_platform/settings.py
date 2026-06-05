@@ -187,15 +187,6 @@ MESSAGE_TAGS = {
     messages.ERROR: 'danger',
 }
 
-# =====================================================================
-# 📊 API KEYS & SERVICES (Your existing keys)
-# =====================================================================
-
-SHODAN_API_KEY = "QxiPyu3NChBy6R0FXJvk5FZm6oxUii9g"
-VIRUSTOTAL_API_KEY = "dfecf68cb82d04c7c43c37362786b363daab0ad261131c246fb26db863190079"
-ABUSEIPDB_API_KEY = "7d3efd0f71c501adf7d31b85c316c373e4fd38ecff3dea46b6a5458aeaacdf744ce16b93ae3bdbc9"
-IPINFO_TOKEN = "4ba65aef9118b2"
-GEMINI_API_KEY = "AIzaSyBQ8_sTu8pf4Gkfw4-XFReEda_H_FQDelA"
 
 # =====================================================================
 # 🔧 DEFAULT AUTO FIELD
