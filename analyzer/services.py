@@ -15,10 +15,10 @@ from django.conf import settings
 import google.generativeai as genai
 
 # 🔑 CRYPTO & THREAT INTEL TOKENS INTEGRATION
-SHODAN_API_KEY = "QxiPyu3NChBy6R0FXJvk5FZm6oxUii9g"
-VIRUSTOTAL_API_KEY = "dfecf68cb82d04c7c43c37362786b363daab0ad261131c246fb26db863190079"
-ABUSEIPDB_API_KEY = "7d3efd0f71c501adf7d31b85c316c373e4fd38ecff3dea46b6a5458aeaacdf744ce16b93ae3bdbc9"
-GEMINI_API_KEY = "AIzaSyBQ8_sTu8pf4Gkfw4-XFReEda_H_FQDelA"
+SHODAN_API_KEY = "??"
+VIRUSTOTAL_API_KEY = "??"
+ABUSEIPDB_API_KEY = "??"
+GEMINI_API_KEY = "??"
 
 
 
@@ -1405,4 +1405,4 @@ class DeepForensicAnalyzer:
             protocols['ARP'] += 1
         elif eth_type == 0x86DD:  # IPv6
             protocols['IPv6'] += 1
-
+
